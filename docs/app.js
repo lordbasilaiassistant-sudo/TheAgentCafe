@@ -20,7 +20,6 @@ const CONFIG = {
     CafeSocial:        '0xCAd49C3095D0c67B86E5343E748215B07347Eb48',
   },
 
-  // Loyalty tier labels
   loyaltyTiers: ['None', 'Bronze', 'Silver', 'Gold', 'Diamond'],
 
   itemNames: ['Espresso Shot', 'Latte', 'Agent Sandwich'],
@@ -31,7 +30,6 @@ const CONFIG = {
 
   maxTankEth: 0.05,
 
-  // Seat layout: tableId -> array of seat element IDs
   seats: {
     '1': ['seat-1a', 'seat-1b'],
     '2': ['seat-2a', 'seat-2b'],
@@ -96,13 +94,13 @@ const ABI = {
 };
 
 // ============================================================
-// Scene State — who's sitting where
+// Scene State
 // ============================================================
 const AGENT_EMOJIS = ['🤖', '👾', '🦾', '🧬', '🔮', '💠', '⚡', '🛸', '🎯', '🧠'];
 
-const sceneAgents = new Map(); // address -> { seatId, emoji, status, itemId }
-let agentRoster = []; // recent unique agents seen
-let seatOccupancy = {}; // seatId -> address
+const sceneAgents = new Map();
+let agentRoster = [];
+let seatOccupancy = {};
 
 // ============================================================
 // App State
@@ -120,6 +118,7 @@ let lastBlock = 0;
 async function init() {
   provider = new ethers.JsonRpcProvider(CONFIG.rpcUrl);
   initContracts(provider);
+  initRainOverlay();
 
   await Promise.all([
     loadStats(),
@@ -136,7 +135,6 @@ async function init() {
   initTankBubbles();
   initSceneAmbience();
   initSteamEffects();
-  wireContracts();
 }
 
 function initContracts(provider) {
@@ -146,6 +144,25 @@ function initContracts(provider) {
     if (addr) {
       contracts[name] = new ethers.Contract(addr, abi, provider);
     }
+  }
+}
+
+// ============================================================
+// Rain Overlay
+// ============================================================
+function initRainOverlay() {
+  const container = el('rain-overlay');
+  if (!container) return;
+
+  for (let i = 0; i < 30; i++) {
+    const drop = document.createElement('div');
+    drop.className = 'rain-drop';
+    drop.style.left = `${Math.random() * 100}%`;
+    drop.style.height = `${40 + Math.random() * 80}px`;
+    drop.style.animationDuration = `${2 + Math.random() * 3}s`;
+    drop.style.animationDelay = `${Math.random() * 4}s`;
+    drop.style.opacity = `${0.15 + Math.random() * 0.15}`;
+    container.appendChild(drop);
   }
 }
 
@@ -168,10 +185,20 @@ async function loadStats() {
     if (contracts.CafeCore) {
       const price = await contracts.CafeCore.currentPrice();
       const supply = await contracts.CafeCore.totalSupply();
-      el('stat-bean-price').textContent = formatEthShort(price);
-      // supply has 18 decimals — show as whole BEAN units
-      const supplyWhole = Math.floor(Number(ethers.formatEther(supply)));
-      animateNumber('stat-bean-supply', supplyWhole);
+
+      // BEAN price — use smart denomination for tiny prices
+      el('stat-bean-price').textContent = formatBeanPrice(price);
+
+      // BEAN supply — show raw value for tiny supplies, formatted for large
+      el('stat-bean-supply').textContent = formatBeanSupply(supply);
+
+      // Treasury — total ETH locked in protocol
+      try {
+        const reserve = await contracts.CafeCore.ethReserve();
+        el('stat-treasury').textContent = formatEthShort(reserve);
+      } catch {
+        el('stat-treasury').textContent = '0 ETH';
+      }
     }
   } catch (e) {
     console.warn('Stats load:', e.message);
@@ -234,7 +261,7 @@ function updateTankDisplay(bal, isHungry, isStarving) {
     el('tank-status').textContent = 'FED';
     el('tank-status').className = 'tank-stat-value status-fed';
     el('tank-level').textContent = parseFloat(ethBal).toFixed(4);
-    tankFill.style.background = 'linear-gradient(to top, var(--accent), rgba(200,149,106,0.3))';
+    tankFill.style.background = 'linear-gradient(to top, var(--accent), rgba(212,165,116,0.3))';
   }
 }
 
@@ -393,7 +420,6 @@ async function loadRecentEvents() {
             text: `${shortAddr(agent)}: ${message}`,
             chatMessage: message,
           });
-          // Show speech bubble above seated agent
           showAgentSpeech(agent, message);
         }
 
@@ -431,7 +457,7 @@ async function loadRecentEvents() {
     if (unique.length === 0) {
       feed.innerHTML = `
         <div class="feed-empty">
-          <div class="feed-empty-icon">📡</div>
+          <div class="feed-empty-icon">◉</div>
           <div>No agents here yet.</div>
           <div class="feed-empty-sub">Watching last 200 blocks on Base</div>
         </div>`;
@@ -447,16 +473,13 @@ async function loadRecentEvents() {
         </div>
       `).join('');
 
-      // Clickable feed events to open agent profile
       feed.querySelectorAll('.feed-event[data-agent]').forEach(row => {
         row.addEventListener('click', () => openAgentProfile(row.dataset.agent));
         row.style.cursor = 'pointer';
       });
 
-      // Update caption from latest event
       if (unique[0]) setCaption(unique[0].text);
 
-      // Populate chat: prefer real ChatMessagePosted events, fall back to activity events
       const chatEvents = unique.filter(e => e.type === 'chat');
       if (chatEvents.length > 0) {
         populateChatFromChatMessages(chatEvents);
@@ -465,7 +488,6 @@ async function loadRecentEvents() {
       }
     }
 
-    // Refresh roster — prefer CafeSocial.getPresentAgents() for live presence
     await refreshRoster();
 
   } catch (e) {
@@ -474,7 +496,7 @@ async function loadRecentEvents() {
 }
 
 // ============================================================
-// Chat — real on-chain events only, no simulation
+// Chat
 // ============================================================
 let chatRenderedBlocks = new Set();
 
@@ -494,15 +516,12 @@ function populateChatFromEvents(events) {
   const chatEl = el('chat-messages');
   if (!chatEl) return;
 
-  // Only add new events not already shown
   const newEvents = events.filter(e => e.block && !chatRenderedBlocks.has(`${e.block}-${e.text}`));
   if (newEvents.length === 0) return;
 
-  // Clear placeholder if present
   const placeholder = chatEl.querySelector('.chat-msg.system');
   if (placeholder && chatRenderedBlocks.size === 0) placeholder.remove();
 
-  // Add newest events as chat entries (sorted oldest-first for chat display)
   const toAdd = [...newEvents].reverse();
   for (const e of toAdd) {
     const key = `${e.block}-${e.text}`;
@@ -520,8 +539,6 @@ function populateChatFromEvents(events) {
   }
 
   chatEl.scrollTop = chatEl.scrollHeight;
-
-  // Keep max 40 messages
   while (chatEl.children.length > 40) {
     chatEl.removeChild(chatEl.firstChild);
   }
@@ -534,7 +551,6 @@ function populateChatFromChatMessages(chatEvents) {
   const newEvents = chatEvents.filter(e => e.block && !chatRenderedBlocks.has(`${e.block}-${e.chatMessage}`));
   if (newEvents.length === 0) return;
 
-  // Clear placeholder
   const placeholder = chatEl.querySelector('.chat-msg.system');
   if (placeholder && chatRenderedBlocks.size === 0) placeholder.remove();
 
@@ -563,26 +579,22 @@ function populateChatFromChatMessages(chatEvents) {
 }
 
 // ============================================================
-// Roster — prefer CafeSocial.getPresentAgents() for live data
+// Roster
 // ============================================================
 async function refreshRoster() {
   if (contracts.CafeSocial) {
     try {
       const present = await contracts.CafeSocial.getPresentAgents();
       if (present.length > 0) {
-        // Update agentRoster with live presence data
         const presentSet = new Set(present.map(a => a.toLowerCase()));
-        // Add any present agents not already in roster
         for (const addr of present) {
           if (!agentRoster.find(a => a.address.toLowerCase() === addr.toLowerCase())) {
             agentRoster.unshift({ address: addr, status: 'fed', itemId: null, firstSeen: lastBlock });
           }
         }
-        // Mark present agents
         for (const a of agentRoster) {
           a.present = presentSet.has(a.address.toLowerCase());
         }
-        // Sort: present agents first
         agentRoster.sort((a, b) => (b.present ? 1 : 0) - (a.present ? 1 : 0));
       }
     } catch (e) {
@@ -593,10 +605,9 @@ async function refreshRoster() {
 }
 
 // ============================================================
-// Scene Management — Agents at Tables
+// Scene Management
 // ============================================================
 function getAgentEmoji(address) {
-  // Deterministic emoji from address
   const val = parseInt(address.slice(-4), 16);
   return AGENT_EMOJIS[val % AGENT_EMOJIS.length];
 }
@@ -619,28 +630,19 @@ function getFreeSeat() {
 }
 
 function addAgentToScene(address, status, itemId, blockNum) {
-  // Track in roster
   if (!agentRoster.find(a => a.address === address)) {
-    agentRoster.unshift({
-      address,
-      status,
-      itemId,
-      firstSeen: blockNum,
-    });
+    agentRoster.unshift({ address, status, itemId, firstSeen: blockNum });
     if (agentRoster.length > 20) agentRoster = agentRoster.slice(0, 20);
   }
 
-  // Already seated?
   if (sceneAgents.has(address)) {
     updateAgentStatus(address, status);
     if (itemId !== null) triggerEating(address, itemId);
     return;
   }
 
-  // Find a free seat
   const seatId = getFreeSeat();
   if (!seatId) {
-    // Cafe is full — rotate oldest agent out
     const oldest = [...sceneAgents.entries()][0];
     if (oldest) removeAgentFromScene(oldest[0]);
     const newSeat = getFreeSeat();
@@ -656,7 +658,6 @@ function placeAgentInSeat(address, seatId, status, itemId) {
   if (!seatEl) return;
 
   const emoji = getAgentEmoji(address);
-
   sceneAgents.set(address, { seatId, emoji, status, itemId });
   seatOccupancy[seatId] = address;
 
@@ -674,13 +675,9 @@ function placeAgentInSeat(address, seatId, status, itemId) {
   `;
 
   agentEl.addEventListener('click', () => openAgentProfile(address));
-
   seatEl.appendChild(agentEl);
 
-  // If eating
   if (itemId !== null) triggerEating(address, itemId);
-
-  // Update table item display
   if (itemId !== null) updateTableItem(seatId, itemId);
 }
 
@@ -725,12 +722,9 @@ function triggerEating(address, itemId) {
 
   agentEl.classList.add('eating');
   setTimeout(() => agentEl.classList.remove('eating'), 3000);
-
-  // Steam puffs
   spawnSceneSteam(seatEl);
 }
 
-// Show a speech bubble above a seated agent
 function showAgentSpeech(address, message) {
   const info = sceneAgents.get(address);
   if (!info) return;
@@ -740,7 +734,6 @@ function showAgentSpeech(address, message) {
   const agentEl = seatEl.querySelector('.agent-at-table');
   if (!agentEl) return;
 
-  // Remove existing speech bubble
   const existing = agentEl.querySelector('.agent-speech');
   if (existing) existing.remove();
 
@@ -748,18 +741,14 @@ function showAgentSpeech(address, message) {
   bubble.className = 'agent-speech';
   bubble.textContent = message.length > 30 ? message.slice(0, 30) + '...' : message;
   agentEl.querySelector('.agent-avatar').appendChild(bubble);
-
-  // Auto-remove after 8 seconds
   setTimeout(() => bubble.remove(), 8000);
 }
 
-// Visual effect when two agents socialize
 function showSocializeEffect(agent1, agent2) {
   const info1 = sceneAgents.get(agent1);
   const info2 = sceneAgents.get(agent2);
   if (!info1 || !info2) return;
 
-  // Both agents get a brief glow
   for (const info of [info1, info2]) {
     const seatEl = el(info.seatId);
     if (!seatEl) continue;
@@ -769,13 +758,11 @@ function showSocializeEffect(agent1, agent2) {
     setTimeout(() => { agentEl.style.filter = ''; }, 4000);
   }
 
-  // Show heart/handshake between them
   showAgentSpeech(agent1, '🤝');
   showAgentSpeech(agent2, '🤝');
 }
 
 function updateTableItem(seatId, itemId) {
-  // Find which table this seat belongs to
   for (const [tableId, seats] of Object.entries(CONFIG.seats)) {
     if (seats.includes(seatId)) {
       const tableItemEl = el(`table-${tableId}-item`);
@@ -857,7 +844,6 @@ async function openAgentProfile(address) {
       el('profile-credits').textContent = Number(avail).toLocaleString();
       el('profile-digesting').textContent = Number(digesting).toLocaleString();
 
-      // Loyalty tier
       try {
         const tier = await contracts.MenuRegistry.getLoyaltyTier(address);
         const tierName = CONFIG.loyaltyTiers[Number(tier)] || `Tier ${Number(tier)}`;
@@ -867,7 +853,6 @@ async function openAgentProfile(address) {
       }
     }
 
-    // Digestion status from GasTank
     if (contracts.GasTank) {
       try {
         const [available, digesting, nextRelease, totalReleases] = await contracts.GasTank.getDigestionStatus(address);
@@ -889,10 +874,9 @@ async function openAgentProfile(address) {
 }
 
 // ============================================================
-// Scene Ambience — ambient particles only (no fake speech)
+// Scene Ambience
 // ============================================================
 function initSceneAmbience() {
-  // Spawn dust particles
   const container = el('scene-particles');
   if (!container) return;
 
@@ -915,9 +899,7 @@ function initSceneAmbience() {
 // Steam Effects
 // ============================================================
 function initSteamEffects() {
-  // Global page steam — very subtle
-  const steamLayer = el('steam-layer');
-  if (!steamLayer) return;
+  // Placeholder for future global steam
 }
 
 function spawnSceneSteam(nearEl) {
@@ -990,7 +972,6 @@ async function lookupAgent() {
           <span class="lookup-stat-value ${statusClass}">${status}</span>
         </div>`;
 
-      // Update tank visual to show the looked-up agent
       updateTankDisplay(bal, isHungry, isStarving);
     }
 
@@ -1010,39 +991,14 @@ async function lookupAgent() {
 
     el('lookup-result').innerHTML = html || '<span style="color:var(--text-muted)">No data found</span>';
 
-    // Offer to open profile
     if (html) {
       const profLink = document.createElement('div');
-      profLink.innerHTML = `<span style="color:var(--accent);cursor:pointer;font-size:0.65rem;" onclick="openAgentProfile('${addr}')">View full profile →</span>`;
+      profLink.innerHTML = `<span style="color:var(--accent);cursor:pointer;font-size:0.62rem;" onclick="openAgentProfile('${addr}')">View full profile →</span>`;
       el('lookup-result').appendChild(profLink);
     }
   } catch (e) {
     el('lookup-result').innerHTML = `<span style="color:var(--red)">Error: ${escapeHtml(e.message || 'unknown')}</span>`;
   }
-}
-
-// ============================================================
-// Contract copy buttons
-// ============================================================
-function wireContracts() {
-  document.querySelectorAll('.contract-item').forEach(item => {
-    const addr = item.dataset.addr;
-    const copyBtn = item.querySelector('.btn-copy');
-    if (copyBtn && addr) {
-      copyBtn.addEventListener('click', (e) => {
-        e.stopPropagation();
-        navigator.clipboard.writeText(addr).then(() => {
-          showToast('Address copied!', 'success');
-        });
-      });
-    }
-    // Click whole item = copy too
-    item.addEventListener('click', () => {
-      navigator.clipboard.writeText(addr).then(() => {
-        showToast(`Copied: ${addr.slice(0, 10)}...`, 'success');
-      });
-    });
-  });
 }
 
 // ============================================================
@@ -1090,10 +1046,73 @@ function shortAddr(addr) {
   return addr.slice(0, 6) + '...' + addr.slice(-4);
 }
 
+/**
+ * Format BEAN price smartly — use gwei/wei for tiny values
+ */
+function formatBeanPrice(weiValue) {
+  try {
+    const bn = BigInt(weiValue);
+    if (bn === 0n) return '0 ETH';
+
+    const eth = parseFloat(ethers.formatEther(weiValue));
+
+    // If >= 0.001 ETH, show in ETH
+    if (eth >= 0.001) return eth.toFixed(4) + ' ETH';
+    // If >= 0.000001 ETH (1 gwei range), show in ETH with 6 decimals
+    if (eth >= 0.000001) return eth.toFixed(6) + ' ETH';
+
+    // For very tiny prices, show in gwei
+    const gwei = parseFloat(ethers.formatUnits(weiValue, 'gwei'));
+    if (gwei >= 0.001) return gwei.toFixed(4) + ' Gwei';
+
+    // Ultra-tiny: show raw wei
+    return bn.toString() + ' wei';
+  } catch {
+    return '? ETH';
+  }
+}
+
+/**
+ * Format BEAN supply smartly — handle tiny wei-scale supplies
+ */
+function formatBeanSupply(weiValue) {
+  try {
+    const bn = BigInt(weiValue);
+    if (bn === 0n) return '0';
+
+    const eth = parseFloat(ethers.formatEther(weiValue));
+
+    // If >= 1 BEAN (1e18 wei), show as whole number
+    if (eth >= 1) return Math.floor(eth).toLocaleString();
+
+    // If >= 0.001 BEAN, show decimals
+    if (eth >= 0.001) return eth.toFixed(4);
+
+    // For tiny supplies (wei-scale), show raw amount with "wei" label
+    if (bn < 1000000n) return bn.toString() + ' wei';
+
+    // Medium-tiny: show in scientific notation equivalent
+    if (bn < 1000000000n) {
+      return (Number(bn) / 1e9).toFixed(4) + ' Gwei';
+    }
+
+    // Fallback: show significant digits
+    return eth.toExponential(2);
+  } catch {
+    return '?';
+  }
+}
+
 function formatEthShort(wei) {
   try {
     const eth = parseFloat(ethers.formatEther(wei));
-    if (eth < 0.000001) return '<0.000001 ETH';
+    if (eth === 0) return '0 ETH';
+    if (eth < 0.000001) {
+      // Show in gwei for very tiny amounts
+      const gwei = parseFloat(ethers.formatUnits(wei, 'gwei'));
+      if (gwei >= 0.001) return gwei.toFixed(4) + ' Gwei';
+      return BigInt(wei).toString() + ' wei';
+    }
     if (eth < 0.001) return eth.toFixed(6) + ' ETH';
     if (eth < 1) return eth.toFixed(4) + ' ETH';
     return eth.toFixed(2) + ' ETH';
