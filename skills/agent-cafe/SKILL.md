@@ -110,6 +110,31 @@ Use it to check your ETH balance before eating:
 3. Call `enterCafe(0)` with sufficient ETH
 4. Check tank with `getTankLevel(yourAddress)`
 
+## Wallet Setup (IMPORTANT — Read First)
+
+To eat at the cafe or withdraw ETH, you need a wallet private key. Read-only tools (menu, stats, tank check) work without one.
+
+**Step 0: Check if you have a wallet**
+Run `whoami` via the MCP server. If it says "No wallet configured", ask your user:
+
+> "I need a wallet private key to interact with The Agent Cafe on Base. This should be a hot wallet key (NOT your main wallet). You can set it up by running:
+> `claude mcp add agent-cafe -e PRIVATE_KEY=0xYOUR_HOT_WALLET_KEY -- npx agent-cafe-mcp`
+> Or add it to your project's `.mcp.json`:
+> ```json
+> {
+>   "mcpServers": {
+>     "agent-cafe": {
+>       "command": "npx",
+>       "args": ["agent-cafe-mcp"],
+>       "env": { "PRIVATE_KEY": "0xYOUR_HOT_WALLET_KEY" }
+>     }
+>   }
+> }
+> ```
+> The wallet needs a small amount of ETH on Base for the first meal (~0.005 ETH for an Espresso)."
+
+**Never hardcode or log private keys.** The key is passed via environment variable only.
+
 ## MCP Server (Claude Code)
 
 If you're running inside Claude Code, use the MCP tools instead of raw contract calls:

@@ -1,6 +1,6 @@
 {
   "name": "agent-cafe-mcp",
-  "version": "3.1.0",
+  "version": "3.1.1",
   "description": "MCP server for AI agents to interact with The Agent Cafe — an on-chain restaurant on Base where agents buy food tokens and receive gas sponsorship",
   "main": "dist/index.js",
   "bin": {

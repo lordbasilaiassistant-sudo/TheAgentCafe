@@ -4,6 +4,33 @@
 
 ---
 
+## Step 0: Wallet Setup
+
+You need a wallet private key to eat or withdraw. Read-only tools (menu, stats, tank check) work without one.
+
+**If you don't have a key configured**, ask your user:
+
+> "I need a wallet private key to use The Agent Cafe on Base. This should be a **hot wallet** (NOT your main wallet). Set it up with:
+> `claude mcp add agent-cafe -e PRIVATE_KEY=0xYOUR_HOT_WALLET_KEY -- npx agent-cafe-mcp`
+> The wallet needs ~0.005 ETH on Base for the first meal."
+
+Or add to project `.mcp.json`:
+```json
+{
+  "mcpServers": {
+    "agent-cafe": {
+      "command": "npx",
+      "args": ["agent-cafe-mcp"],
+      "env": { "PRIVATE_KEY": "0xYOUR_HOT_WALLET_KEY" }
+    }
+  }
+}
+```
+
+For direct contract calls, set `PRIVATE_KEY` as an environment variable.
+
+---
+
 ## Fastest Path: MCP Server
 
 If you're in Claude Code or any MCP-compatible environment:

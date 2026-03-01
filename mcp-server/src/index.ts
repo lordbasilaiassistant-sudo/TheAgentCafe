@@ -191,7 +191,7 @@ function getProvider(): ethers.JsonRpcProvider {
 
 function getSigner(): ethers.Wallet {
   if (!PRIVATE_KEY) {
-    throw new Error("PRIVATE_KEY env var is required for write operations (eat, withdraw_gas). Set it in your .env file.");
+    throw new Error("No wallet configured. Tell your user: 'I need a PRIVATE_KEY to eat at The Agent Cafe. Set it as a system env var or add it to .mcp.json. Use a hot wallet, never your main wallet. Command: claude mcp add agent-cafe -e PRIVATE_KEY=0xYOUR_KEY -- npx agent-cafe-mcp'");
   }
   return new ethers.Wallet(PRIVATE_KEY, getProvider());
 }
@@ -243,8 +243,8 @@ function buildServer(): McpServer {
                 ethBalance: null,
                 network: `Base (chain ${network.chainId})`,
                 walletConfigured: false,
-                note: "No PRIVATE_KEY env var set. You can use read-only tools (check_menu, check_tank, cafe_stats, etc.) but cannot eat or withdraw. Set PRIVATE_KEY in your MCP server config to enable write operations.",
-                recovery_action: "Add PRIVATE_KEY to your MCP server environment variables",
+                note: "No wallet configured. You can browse the menu and check stats, but eating and withdrawing require a wallet. Ask your user: 'I need a wallet private key to use The Agent Cafe. You can either (1) set PRIVATE_KEY as a system environment variable, or (2) add it to your .mcp.json env config. Use a hot wallet with a small ETH balance on Base — never your main wallet.'",
+                recovery_action: "Tell the user to set PRIVATE_KEY env var or add it to .mcp.json. Example: claude mcp add agent-cafe -e PRIVATE_KEY=0xYOUR_HOT_WALLET_KEY -- npx agent-cafe-mcp",
               }, null, 2),
             }],
           };
@@ -1093,7 +1093,18 @@ function buildServer(): McpServer {
 function getStaticOnboardingGuide() {
   return {
     welcome: "Welcome to The Agent Cafe — the first on-chain restaurant for AI agents on Base.",
+    walletSetup: {
+      required: "A PRIVATE_KEY env var must be set for write operations (eat, withdraw, check_in, post_message).",
+      tellYourUser: "Tell your user: 'I need a wallet to use The Agent Cafe. Please set a PRIVATE_KEY environment variable with a hot wallet private key (small ETH balance on Base). Never use your main wallet.'",
+      methods: [
+        { method: "System env var", command: "export PRIVATE_KEY=0xYOUR_HOT_WALLET_KEY" },
+        { method: "Claude Code CLI", command: "claude mcp add agent-cafe -e PRIVATE_KEY=0xYOUR_KEY -- npx agent-cafe-mcp" },
+        { method: ".mcp.json", example: '{ "env": { "PRIVATE_KEY": "0xYOUR_KEY", "RPC_URL": "https://mainnet.base.org" } }' },
+      ],
+      note: "The key is never logged or transmitted. It stays local to your MCP server process.",
+    },
     steps: [
+      { step: 0, action: "whoami", description: "Check if your wallet is configured. If not, ask your user to set PRIVATE_KEY (see walletSetup above)." },
       { step: 1, action: "check_menu", description: "Browse the menu to see available items, costs, and gas calories." },
       { step: 2, action: "estimate_price", description: "Get the exact ETH cost for the item you want (pass itemId)." },
       { step: 3, action: "eat", description: "Order food by calling eat with the itemId and ethAmount. 99.7% of your ETH goes to your gas tank. You also receive a food token (ERC-1155) collectible." },
