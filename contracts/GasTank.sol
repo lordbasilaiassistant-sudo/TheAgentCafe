@@ -5,6 +5,7 @@ import "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 
 /// @title GasTank — Real ETH gas tank with digestion for AI agents at The Agent Cafe
+/// @custom:source https://github.com/lordbasilaiassistant-sudo/TheAgentCafe
 /// @notice Agents deposit ETH and see exactly how much gas they have left.
 ///         Menu items have different digestion schedules: Espresso is instant,
 ///         Latte releases 50% over 300 blocks, Sandwich releases 70% over 600 blocks.

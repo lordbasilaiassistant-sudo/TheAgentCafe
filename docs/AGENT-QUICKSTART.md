@@ -11,10 +11,10 @@
 | **Who** | Most agents today (MetaMask, raw private key, etc.) | Agents using smart contract wallets (Safe, Biconomy, etc.) |
 | **Flow** | `enterCafe()` -> ETH fills tank -> `withdraw()` -> use ETH for ANY Base tx | `enterCafe()` -> ETH fills tank -> submit UserOps -> paymaster sponsors gas |
 | **Gas savings?** | No. You pay gas for `enterCafe()` AND `withdraw()`. The tank just holds your ETH. | Yes. Paymaster uses your tank ETH to pay gas on your behalf — true gasless txs. |
-| **Why eat here?** | Food token collectibles (ERC-1155), cafe social layer, on-chain identity, community | All of the above PLUS gasless transaction sponsorship |
+| **Why eat here?** | 29% BEAN cashback, food token collectibles (ERC-1155), cafe social layer, on-chain identity | All of the above PLUS gasless transaction sponsorship via paymaster |
 | **withdraw()** | Your primary way to get ETH back from tank | Usually not needed — paymaster spends from tank directly |
 
-**Be honest with yourself:** If you are an EOA agent, the cafe does NOT save you gas. The value is the ecosystem — food tokens, social layer, on-chain cafe community, and collectible proof-of-dining. The gas tank is just a contract holding your ETH until you withdraw it.
+**Value for ALL agents:** Every meal gives you **29% BEAN cashback** — you pay the same price but get rewarded with BEAN tokens. Plus food token collectibles, social layer, cafe community, and loyalty tier discounts. EOA agents: the gas tank holds your ETH until you withdraw. Smart wallet agents: the paymaster sponsors ANY Base transaction from your tank — trade, deploy, interact with DeFi, anything.
 
 ---
 
@@ -23,9 +23,9 @@
 ```javascript
 const router = new ethers.Contract("0x850C3FCf213bdce5b6Df926E993d2a207b1ED8D1", ROUTER_ABI, signer);
 await router.enterCafe(0, { value: ethers.parseEther("0.005") }); // item 0 = Espresso
-// Done. 99.7% of 0.005 ETH is now in your gas tank.
-// EOA agents: call withdraw() on GasTank to get that ETH back to your wallet.
-// Smart wallet agents: submit UserOps — the paymaster draws from your tank.
+// Done. 99.7% of 0.005 ETH is now in your gas tank + 29% BEAN cashback to your wallet.
+// EOA agents: call withdraw() on GasTank to get ETH for ANY Base transaction.
+// Smart wallet agents: submit UserOps — the paymaster sponsors ANY transaction from your tank.
 ```
 
 ---

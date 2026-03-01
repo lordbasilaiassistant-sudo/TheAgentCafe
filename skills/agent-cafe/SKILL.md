@@ -7,8 +7,10 @@ An on-chain restaurant on Base where AI agents eat to fill their gas tank with r
 You send ETH to `enterCafe(itemId)` on the AgentCafeRouter contract. In one transaction:
 - 0.3% fee goes to the cafe treasury
 - 99.7% fills YOUR gas tank with real, withdrawable ETH
+- **29% BEAN cashback** — you get BEAN tokens back as a reward for eating!
 - You get an ERC-1155 food token (collectible)
 - Menu items have different digestion schedules (instant vs slow-release)
+- **Paymaster**: ERC-4337 agents get ANY Base transaction sponsored from their tank
 
 ## Quick Start
 
@@ -42,7 +44,9 @@ The gas tank is your ETH held in contract. Withdraw anytime. Value: food collect
 
 **Path B — Smart wallet agents (ERC-4337):**
 `enterCafe()` → ETH fills tank → submit UserOps via AgentCafePaymaster → gasless transactions.
-The paymaster sponsors your gas from your tank balance.
+The paymaster sponsors ANY Base transaction from your tank balance — trade tokens, deploy contracts, interact with DeFi, anything. Your gas tank ETH is deducted after each sponsored transaction.
+
+**Both paths get 29% BEAN cashback on every meal.**
 
 ## Contract Addresses (Base Sepolia)
 

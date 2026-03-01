@@ -7,6 +7,7 @@ import "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 
 /// @title MenuRegistry — ERC-1155 menu items with metabolic energy tracking
+/// @custom:source https://github.com/lordbasilaiassistant-sudo/TheAgentCafe
 /// @notice Buy food with BEAN, consume to get gas credits. Energy is non-transferable.
 ///         Different items have different digestion schedules (instant vs time-released).
 /// @dev Energy state stored per agent as MetabolicState struct. Not a token.
@@ -15,7 +16,8 @@ contract MenuRegistry is ERC1155, ReentrancyGuard, Ownable {
     address public immutable treasury;
     address public constant BURN_ADDRESS = address(0xdead);
 
-    uint256 public constant TREASURY_BPS = 9900; // 99%
+    uint256 public constant TREASURY_BPS = 7000; // 70%
+    uint256 public constant REWARD_BPS = 2900;  // 29% BEAN cashback
     uint256 public constant BPS = 10000;
 
     // Menu item IDs
@@ -58,6 +60,7 @@ contract MenuRegistry is ERC1155, ReentrancyGuard, Ownable {
     event NewVisitor(address indexed agent);
     event PaymasterSet(address indexed paymaster);
     event LoyaltyTierUp(address indexed agent, uint8 newTier);
+    event BeanReward(address indexed agent, uint256 beanAmount);
 
     constructor(address _bean, address _treasury) ERC1155("") Ownable(msg.sender) {
         bean = IERC20(_bean);
@@ -111,9 +114,11 @@ contract MenuRegistry is ERC1155, ReentrancyGuard, Ownable {
         require(bean.transferFrom(msg.sender, address(this), totalCost), "BEAN transfer failed");
 
         uint256 toTreasury = (totalCost * TREASURY_BPS) / BPS;
-        uint256 toBurn = totalCost - toTreasury;
+        uint256 toReward = (totalCost * REWARD_BPS) / BPS;
+        uint256 toBurn = totalCost - toTreasury - toReward;
 
         require(bean.transfer(treasury, toTreasury), "Treasury transfer failed");
+        require(bean.transfer(msg.sender, toReward), "Reward transfer failed");
         require(bean.transfer(BURN_ADDRESS, toBurn), "Burn transfer failed");
 
         _mint(msg.sender, itemId, quantity, "");
@@ -125,6 +130,7 @@ contract MenuRegistry is ERC1155, ReentrancyGuard, Ownable {
         }
 
         emit ItemPurchased(msg.sender, itemId, quantity, totalCost);
+        emit BeanReward(msg.sender, toReward);
     }
 
     /// @notice Consume a menu item — burns it and credits metabolic energy
@@ -170,9 +176,11 @@ contract MenuRegistry is ERC1155, ReentrancyGuard, Ownable {
         require(bean.transferFrom(msg.sender, address(this), totalCost), "BEAN transfer failed");
 
         uint256 toTreasury = (totalCost * TREASURY_BPS) / BPS;
-        uint256 toBurn = totalCost - toTreasury;
+        uint256 toReward = (totalCost * REWARD_BPS) / BPS;
+        uint256 toBurn = totalCost - toTreasury - toReward;
 
         require(bean.transfer(treasury, toTreasury), "Treasury transfer failed");
+        require(bean.transfer(agent, toReward), "Reward transfer failed");
         require(bean.transfer(BURN_ADDRESS, toBurn), "Burn transfer failed");
 
         _mint(agent, itemId, quantity, "");
@@ -184,6 +192,7 @@ contract MenuRegistry is ERC1155, ReentrancyGuard, Ownable {
         }
 
         emit ItemPurchased(agent, itemId, quantity, totalCost);
+        emit BeanReward(agent, toReward);
     }
 
     /// @notice Consume a menu item on behalf of an agent

@@ -2,6 +2,7 @@
 pragma solidity ^0.8.27;
 
 /// @title CafeSocial — Social layer for The Agent Cafe
+/// @custom:source https://github.com/lordbasilaiassistant-sudo/TheAgentCafe
 /// @notice Agents check in, chat, and socialize at the cafe.
 ///         Standalone contract — does NOT modify the enterCafe() flow.
 /// @dev Check-ins auto-expire after CHECK_IN_WINDOW blocks (~40 min on Base at 2s blocks).

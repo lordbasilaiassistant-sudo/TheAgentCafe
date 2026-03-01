@@ -46,13 +46,13 @@
 
 | Contract | deployments.json | app.js | agent.json | mcp-server | README |
 |----------|-----------------|--------|------------|------------|--------|
-| CafeCore | `0x16D3794...` | ✓ | ✓ | ✓ | ✓ |
-| CafeTreasury | `0x6ceC16b...` | ✓ | ✓ | ✓ | ✓ |
-| GasTank | `0x939CcaB...` | ✓ | ✓ | ✓ | ✓ |
-| MenuRegistry | `0x31e8E95...` | ✓ | ✓ | ✓ | ✓ |
-| AgentCafeRouter | `0x9649C36...` | ✓ | ✓ | ✓ | ✓ |
-| AgentCafePaymaster | `0xCaf5a4d...` | ✓ | ✓ | ✓ | ✓ |
-| AgentCard | `0x5982BcD...` | ✓ | ✓ | ✓ | ✓ |
+| CafeCore | `0xb20369c...` | ✓ | ✓ | ✓ | ✓ |
+| CafeTreasury | `0xD77D944...` | ✓ | ✓ | ✓ | ✓ |
+| GasTank | `0xBEE479C...` | ✓ | ✓ | ✓ | ✓ |
+| MenuRegistry | `0x6D60a91...` | ✓ | ✓ | ✓ | ✓ |
+| AgentCafeRouter | `0xA0127F2...` | ✓ | ✓ | ✓ | ✓ |
+| AgentCafePaymaster | `0x59489c9...` | ✓ | ✓ | ✓ | ✓ |
+| AgentCard | `0xB9F87CA...` | ✓ | ✓ | ✓ | ✓ |
 
 ---
 

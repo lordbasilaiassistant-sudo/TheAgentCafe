@@ -12,6 +12,8 @@ import "./GasTank.sol";
 /// @notice Send ETH + pick a menu item → 0.3% to owner treasury, 99.7% fills your gas tank,
 ///         food token minted as social proof. That's it. One call.
 /// @dev Handles BEAN minting, food purchase, consumption, and gas tank fill in one tx.
+/// @custom:source https://github.com/lordbasilaiassistant-sudo/TheAgentCafe
+/// @custom:dashboard https://lordbasilaiassistant-sudo.github.io/TheAgentCafe/
 contract AgentCafeRouter is ReentrancyGuard, Ownable, IERC165 {
     CafeCore public immutable cafeCore;
     MenuRegistry public immutable menuRegistry;

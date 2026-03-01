@@ -7,6 +7,7 @@ import "@account-abstraction/contracts/core/UserOperationLib.sol";
 import "./GasTank.sol";
 
 /// @title AgentCafePaymaster — ERC-4337 paymaster powered by GasTank ETH
+/// @custom:source https://github.com/lordbasilaiassistant-sudo/TheAgentCafe
 /// @notice Agents that eat at The Agent Cafe get their transactions sponsored.
 ///         Gas is deducted from their ETH gas tank balance.
 ///         No energy? "Agent is hungry -- visit The Agent Cafe"
@@ -96,6 +97,9 @@ contract AgentCafePaymaster is BasePaymaster {
             emit GasSponsored(agent, costWei, remaining);
         }
     }
+
+    /// @notice Accept ETH from GasTank after deductForGas
+    receive() external payable {}
 
     function _checkRateLimit(address agent, uint256 gas) internal {
         RateLimit storage limit = rateLimits[agent];

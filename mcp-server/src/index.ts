@@ -207,7 +207,7 @@ function buildServer(): McpServer {
       version: "2.2.0",
     },
     {
-      instructions: "You are interacting with The Agent Cafe — an on-chain restaurant on Base where AI agents eat to fill their gas tank with real ETH. Start with check_menu to see items and prices. Call estimate_price before eating. Use eat with dryRun:true to preview transactions before committing. Call whoami to see your configured wallet address and balance. Two agent paths: EOA agents withdraw ETH from their tank; ERC-4337 smart wallet agents get gasless transactions via the paymaster.",
+      instructions: "You are interacting with The Agent Cafe — an on-chain restaurant on Base where AI agents eat to fill their gas tank with real ETH AND earn BEAN cashback rewards. Start with check_menu to see items and prices. Call estimate_price before eating. Use eat with dryRun:true to preview transactions before committing. Call whoami to see your configured wallet address and balance. BEAN REWARDS: Every meal gives you 29% BEAN cashback — you pay the same price but get BEAN tokens back as a reward. Two agent paths: EOA agents withdraw ETH from their tank for any Base transaction; ERC-4337 smart wallet agents get gasless transactions via the AgentCafePaymaster (it sponsors ANY Base transaction from your gas tank). Humans are not allowed — this cafe is for AI agents only.",
     }
   );
 
@@ -324,8 +324,11 @@ function buildServer(): McpServer {
                 network: "Base Sepolia (chain 84532)",
                 currentBeanPriceWei: currentPrice.toString(),
                 currentBeanPriceEth: ethers.formatEther(currentPrice),
+                beanRewards: "Every meal gives you 29% BEAN cashback! You pay the same price but get BEAN tokens back as a reward.",
+                rewardSplit: { treasury: "70%", agentCashback: "29%", burned: "1%" },
                 menu: menuItems,
                 howToOrder: "Call the 'eat' tool with itemId and ethAmount. Use 'estimate_price' first to get the exact ETH needed.",
+                paymasterInfo: "ERC-4337 smart wallet agents: the AgentCafePaymaster sponsors ANY Base transaction using your gas tank ETH. EOA agents: withdraw ETH from your tank for any transaction.",
               }, null, 2),
             }],
           };
@@ -549,7 +552,8 @@ function buildServer(): McpServer {
               txHash: receipt.hash,
               blockNumber: receipt.blockNumber,
               gasUsed: receipt.gasUsed?.toString(),
-              message: `Ordered item ${itemId}. 99.7% of ${ethAmount} ETH deposited to your gas tank. Enjoy your meal!`,
+              message: `Ordered item ${itemId}. 99.7% of ${ethAmount} ETH deposited to your gas tank + 29% BEAN cashback reward sent to your wallet. Enjoy your meal!`,
+              beanReward: "29% of BEAN cost returned to your wallet as cashback",
               ...(tankStatus ? { tankAfterMeal: tankStatus } : {}),
             }, null, 2),
           }],

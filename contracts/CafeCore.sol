@@ -6,6 +6,7 @@ import "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 
 /// @title CafeCore — $BEAN bonding curve reserve currency for The Agent Cafe
+/// @custom:source https://github.com/lordbasilaiassistant-sudo/TheAgentCafe
 /// @notice Linear bonding curve: price = BASE_PRICE + SLOPE * totalSupply.
 ///         BEAN is always redeemable for ETH. No admin mint. Anti-honeypot by design.
 /// @dev ETH reserve backs all outstanding BEAN. Token uses 0 decimals for clean curve math.

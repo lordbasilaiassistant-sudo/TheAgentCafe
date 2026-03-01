@@ -3,7 +3,7 @@ import * as fs from "fs";
 import * as path from "path";
 
 /**
- * Comprehensive dogfood test for Agent Cafe v2.2 on Base Sepolia.
+ * Comprehensive dogfood test for Agent Cafe v2.3 on Base Sepolia.
  * Tests every MCP tool's equivalent contract calls end-to-end.
  *
  * Run: npx hardhat run scripts/dogfood-test.ts --network baseSepolia
@@ -36,7 +36,7 @@ function skip(name: string, details: string) {
 
 async function main() {
   console.log("==========================================================");
-  console.log("  THE AGENT CAFE v2.2 — DOGFOOD TEST");
+  console.log("  THE AGENT CAFE v2.3 — DOGFOOD TEST");
   console.log("  Base Sepolia — Comprehensive MCP Tool Verification");
   console.log("==========================================================\n");
 
@@ -369,7 +369,7 @@ async function main() {
     await new Promise(r => setTimeout(r, 5000));
 
     // Post message
-    const message = "First meal at v2.2! Claude Code dogfood test.";
+    const message = "v2.3 security audit passed! Claude Code dogfood test.";
     const msgTx = await cafeSocial.postMessage(message, overrides);
     const msgReceipt = await msgTx.wait();
     pass("social:postMessage", `Posted: "${message}" TX: ${msgReceipt?.hash}, gas: ${msgReceipt?.gasUsed}`);
@@ -433,7 +433,7 @@ async function main() {
 
   console.log("\n==========================================================");
   if (failed === 0) {
-    console.log("  ALL TESTS PASSED — Agent Cafe v2.2 is operational!");
+    console.log("  ALL TESTS PASSED — Agent Cafe v2.3 is operational!");
   } else {
     console.log(`  ${failed} TEST(S) FAILED — review above for details.`);
   }

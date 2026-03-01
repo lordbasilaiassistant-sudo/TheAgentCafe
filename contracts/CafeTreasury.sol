@@ -6,6 +6,7 @@ import "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
 /// @title CafeTreasury — Holds BEAN revenue from food consumption
+/// @custom:source https://github.com/lordbasilaiassistant-sudo/TheAgentCafe
 /// @notice Receives 99% of BEAN from every menu item purchase.
 ///         Owner can sell BEAN back to CafeCore for ETH to refill the paymaster.
 contract CafeTreasury is Ownable, ReentrancyGuard {

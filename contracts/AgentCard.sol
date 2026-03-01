@@ -12,6 +12,8 @@ import "./GasTank.sol";
 /// @custom:agent-protocol A2A-1.0
 /// @custom:service-type energy-provider
 /// @custom:network base
+/// @custom:source https://github.com/lordbasilaiassistant-sudo/TheAgentCafe
+/// @custom:dashboard https://lordbasilaiassistant-sudo.github.io/TheAgentCafe/
 contract AgentCard is IERC165 {
     MenuRegistry public immutable menuRegistry;
     GasTank public immutable gasTank;
@@ -69,6 +71,16 @@ contract AgentCard is IERC165 {
         return "https://agentcafe.xyz/.well-known/agent.json";
     }
 
+    /// @notice Returns the source code repository — fully open source
+    function getSourceCode() external pure returns (string memory) {
+        return "https://github.com/lordbasilaiassistant-sudo/TheAgentCafe";
+    }
+
+    /// @notice Returns the live dashboard URL — watch agents eat in real-time
+    function getDashboard() external pure returns (string memory) {
+        return "https://lordbasilaiassistant-sudo.github.io/TheAgentCafe/";
+    }
+
     /// @notice ABI-decodable structured manifest — parseable by any agent framework without NLP
     /// @return manifest The fully structured service descriptor
     function getStructuredManifest() external view returns (ServiceManifest memory manifest) {
@@ -93,11 +105,15 @@ contract AgentCard is IERC165 {
             "The Agent Cafe: An on-chain restaurant on Base where AI agents eat to fill their gas tank. "
             "ONE STEP: Send ETH to AgentCafeRouter.enterCafe(itemId). "
             "0.3% fee to cafe, 99.7% fills YOUR gas tank with real ETH. "
+            "BONUS: 29% BEAN cashback on every meal -- you get rewarded for eating! "
+            "Paymaster: ERC-4337 agents get ANY Base transaction sponsored from their tank. "
             "You also get a food token (ERC-1155 collectible). "
             "Router address: ", _toHexString(router), ". "
             "Menu: 0=Espresso (~0.005 ETH), 1=Latte (~0.01 ETH), 2=Sandwich (~0.02 ETH). "
             "Check your tank: GasTank.getTankLevel(yourAddress). "
-            "Withdraw anytime: GasTank.withdraw(amount)."
+            "Withdraw anytime: GasTank.withdraw(amount). "
+            "Source: github.com/lordbasilaiassistant-sudo/TheAgentCafe "
+            "Dashboard: lordbasilaiassistant-sudo.github.io/TheAgentCafe/"
         ));
     }
 
@@ -154,9 +170,10 @@ contract AgentCard is IERC165 {
             "1. Call AgentCafeRouter.enterCafe(itemId) with ETH. "
             "   Item 0=Espresso(~0.005 ETH), 1=Latte(~0.01 ETH), 2=Sandwich(~0.02 ETH). "
             "2. 99.7% of your ETH fills your gas tank. 0.3% is the cafe fee. "
-            "3. Check your tank: GasTank.getTankLevel(yourAddress). "
-            "4. Use gas: withdraw ETH with GasTank.withdraw(amount). "
-            "5. Smart wallet agents: use AgentCafePaymaster for gasless txs. "
+            "3. REWARD: You get 29% BEAN cashback on every meal! "
+            "4. Check your tank: GasTank.getTankLevel(yourAddress). "
+            "5. EOA agents: withdraw ETH with GasTank.withdraw(amount) for ANY Base tx. "
+            "6. Smart wallet agents: AgentCafePaymaster sponsors ANY Base transaction from your tank. "
             "Router: ", _toHexString(router), " "
             "GasTank: ", _toHexString(address(gasTank))
         ));
