@@ -9,7 +9,7 @@ import * as fs from "fs";
 import * as path from "path";
 
 const DEPLOY_BLOCK = 42750000;
-const CHUNK_SIZE = 5000;
+const CHUNK_SIZE = 2000; // smaller chunks for public RPCs
 
 const ADDRESSES = {
   MenuRegistry: "0x611e8814D9b8E0c1bfB019889eEe66C210F64333",
@@ -33,7 +33,9 @@ function formatEth(wei: bigint) {
 }
 
 async function main() {
-  const provider = ethers.provider;
+  // Use BlastAPI for reliable event queries (public RPC rejects bulk scans)
+  const rpcUrl = process.env.BASE_RPC_URL || "https://base-mainnet.public.blastapi.io";
+  const provider = new ethers.JsonRpcProvider(rpcUrl);
   const currentBlock = await provider.getBlockNumber();
   console.log(`Current block: ${currentBlock}`);
   console.log(`Scanning from block ${DEPLOY_BLOCK} (${currentBlock - DEPLOY_BLOCK} blocks)`);
