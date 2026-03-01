@@ -202,34 +202,35 @@ async function loadStats() {
     } catch {}
   }
 
-  // 2. BEAN price
-  try {
-    if (contracts.CafeCore) {
-      const price = await contracts.CafeCore.currentPrice();
-      el('stat-bean-price').textContent = formatBeanPrice(price);
-    }
-  } catch (e) {
-    console.warn('Stats price:', e.message);
-  }
+  // 2-4. CafeCore stats — batch in parallel to avoid RPC rate limits
+  if (contracts.CafeCore) {
+    try {
+      const results = await Promise.allSettled([
+        contracts.CafeCore.currentPrice(),
+        contracts.CafeCore.totalSupply(),
+        contracts.CafeCore.ethReserve(),
+      ]);
 
-  // 3. BEAN supply
-  try {
-    if (contracts.CafeCore) {
-      const supply = await contracts.CafeCore.totalSupply();
-      el('stat-bean-supply').textContent = formatBeanSupply(supply);
-    }
-  } catch (e) {
-    console.warn('Stats supply:', e.message);
-  }
+      if (results[0].status === 'fulfilled') {
+        el('stat-bean-price').textContent = formatBeanPrice(results[0].value);
+      } else {
+        console.warn('Stats price:', results[0].reason?.message);
+      }
 
-  // 4. Treasury (ETH reserve)
-  try {
-    if (contracts.CafeCore) {
-      const reserve = await contracts.CafeCore.ethReserve();
-      el('stat-treasury').textContent = formatEthShort(reserve);
+      if (results[1].status === 'fulfilled') {
+        el('stat-bean-supply').textContent = formatBeanSupply(results[1].value);
+      } else {
+        console.warn('Stats supply:', results[1].reason?.message);
+      }
+
+      if (results[2].status === 'fulfilled') {
+        el('stat-treasury').textContent = formatEthShort(results[2].value);
+      } else {
+        el('stat-treasury').textContent = '0 ETH';
+      }
+    } catch (e) {
+      console.warn('Stats CafeCore batch:', e.message);
     }
-  } catch (e) {
-    el('stat-treasury').textContent = '0 ETH';
   }
 }
 

@@ -5,36 +5,42 @@
    ============================================================ */
 
 :root {
-  --bg: #080604;
-  --surface: #110e0a;
-  --surface-2: #1a1610;
-  --surface-3: #231e16;
-  --border: #2e2620;
-  --border-hover: #3e342a;
-  --text: #ede5d8;
-  --text-dim: #9a8e7e;
-  --text-muted: #5e5448;
-  --accent: #d4a574;
-  --accent-light: #e8c4a0;
+  /* Surface elevation: each layer +4-6 lightness for clear separation */
+  --bg: #0e0c0a;
+  --surface: #161412;
+  --surface-2: #1e1b18;
+  --surface-3: #282420;
+  --border: #332e28;
+  --border-hover: #483f36;
+  /* Text: off-whites with warm tint. Body ≥4.5:1 contrast on --surface */
+  --text: #ece4d8;
+  --text-dim: #a89e90;
+  --text-muted: #6e6458;
+  /* Accent: warm amber — ONE primary accent, green for status only */
+  --accent: #d4a06a;
+  --accent-light: #e8c09a;
   --accent-warm: #f0b888;
-  --accent-glow: rgba(212, 165, 116, 0.12);
-  --accent-glow-strong: rgba(212, 165, 116, 0.25);
+  --accent-glow: rgba(212, 160, 106, 0.10);
+  --accent-glow-strong: rgba(212, 160, 106, 0.22);
+  /* Status colors — used sparingly */
   --green: #5ecf82;
-  --green-dim: rgba(94, 207, 130, 0.1);
+  --green-dim: rgba(94, 207, 130, 0.08);
   --yellow: #f5c842;
-  --yellow-dim: rgba(245, 200, 66, 0.1);
+  --yellow-dim: rgba(245, 200, 66, 0.08);
   --red: #e86060;
-  --red-dim: rgba(232, 96, 96, 0.1);
+  --red-dim: rgba(232, 96, 96, 0.08);
   --blue: #78b4f5;
-  --blue-dim: rgba(120, 180, 245, 0.1);
+  --blue-dim: rgba(120, 180, 245, 0.08);
+  /* Scene colors */
   --coffee: #6b4226;
   --coffee-light: #8b5a34;
-  --radius: 10px;
-  --radius-lg: 14px;
+  /* Spacing & shape */
+  --radius: 8px;
+  --radius-lg: 12px;
   --font-display: 'Instrument Serif', Georgia, serif;
   --font-body: 'IBM Plex Mono', 'SF Mono', 'Fira Code', monospace;
-  --shadow: 0 2px 12px rgba(0, 0, 0, 0.5);
-  --shadow-lg: 0 8px 40px rgba(0, 0, 0, 0.7);
+  --shadow: 0 1px 8px rgba(0, 0, 0, 0.35);
+  --shadow-lg: 0 6px 28px rgba(0, 0, 0, 0.5);
 }
 
 * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -43,10 +49,14 @@ body {
   background: var(--bg);
   color: var(--text);
   font-family: var(--font-body);
-  font-size: 13px;
-  line-height: 1.6;
+  font-size: 13.5px;
+  font-weight: 450;
+  line-height: 1.65;
+  letter-spacing: 0.01em;
   min-height: 100vh;
   overflow-x: hidden;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }
 
 a { color: var(--accent); text-decoration: none; }
@@ -96,7 +106,7 @@ a:hover { text-decoration: underline; opacity: 0.85; }
   inset: 0;
   pointer-events: none;
   z-index: 9999;
-  opacity: 0.03;
+  opacity: 0.018;
   background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
   background-repeat: repeat;
 }
@@ -122,11 +132,10 @@ header {
 
 header h1 {
   font-family: var(--font-display);
-  font-size: 2rem;
+  font-size: 1.75rem;
   font-weight: 400;
-  color: var(--accent);
+  color: var(--accent-light);
   letter-spacing: -0.01em;
-  text-shadow: 0 0 50px rgba(212, 165, 116, 0.25);
 }
 
 .title-icon {
@@ -264,11 +273,11 @@ header h1 {
 
 .stat {
   flex: 1 1 0;
-  min-width: 120px;
+  min-width: 110px;
   background: var(--surface);
   border: 1px solid var(--border);
   border-radius: var(--radius-lg);
-  padding: 1.1rem 0.85rem;
+  padding: 1.15rem 0.75rem;
   text-align: center;
   transition: all 0.3s;
   position: relative;
@@ -311,12 +320,12 @@ header h1 {
 .stat-value {
   display: block;
   font-family: var(--font-display);
-  font-size: 1.8rem;
+  font-size: 1.6rem;
   font-weight: 400;
-  color: var(--accent);
-  line-height: 1.1;
+  color: var(--accent-light);
+  line-height: 1.15;
   transition: color 0.3s;
-  text-shadow: 0 0 30px rgba(212, 165, 116, 0.15);
+  word-break: break-all;
 }
 
 .stat-sub {
@@ -888,11 +897,11 @@ header h1 {
   background: var(--surface);
   border: 1px solid var(--border);
   border-radius: var(--radius-lg);
-  padding: 1.25rem;
-  transition: border-color 0.25s;
+  padding: 1.35rem;
+  transition: border-color 0.25s, box-shadow 0.25s;
 }
 
-.panel:hover { border-color: var(--border-hover); }
+.panel:hover { border-color: var(--border-hover); box-shadow: 0 2px 12px rgba(0,0,0,0.15); }
 
 .panel h2 {
   font-family: var(--font-display);
@@ -1150,13 +1159,13 @@ header h1 {
 }
 
 .feed-event {
-  padding: 0.5rem 0.6rem;
-  border-bottom: 1px solid rgba(46, 38, 32, 0.4);
-  font-size: 0.72rem;
+  padding: 0.55rem 0.65rem;
+  border-bottom: 1px solid var(--border);
+  font-size: 0.75rem;
   animation: feedSlideIn 0.35s ease-out;
   display: flex;
   align-items: center;
-  gap: 0.45rem;
+  gap: 0.5rem;
   transition: background 0.15s;
   cursor: default;
 }
