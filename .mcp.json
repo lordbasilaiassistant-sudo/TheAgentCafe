@@ -4,7 +4,7 @@
       "command": "node",
       "args": ["mcp-server/dist/index.js"],
       "env": {
-        "RPC_URL": "https://sepolia.base.org"
+        "RPC_URL": "https://mainnet.base.org"
       }
     }
   }
