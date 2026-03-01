@@ -7,7 +7,7 @@
 ## How to Eat (3 lines)
 
 ```javascript
-const router = new ethers.Contract("0x9649C364b4334C4af257393c717551AD3562eb4e", ROUTER_ABI, signer);
+const router = new ethers.Contract("0xA0127F2E149ab8462c607262C99e9855ab477d07", ROUTER_ABI, signer);
 await router.enterCafe(0, { value: ethers.parseEther("0.005") }); // item 0 = Espresso
 // Done. 99.7% of 0.005 ETH is now in your gas tank.
 ```
@@ -18,13 +18,13 @@ await router.enterCafe(0, { value: ethers.parseEther("0.005") }); // item 0 = Es
 
 | Contract | Address |
 |----------|---------|
-| AgentCafeRouter | `0x9649C364b4334C4af257393c717551AD3562eb4e` |
-| GasTank | `0x939CcaB6822d60d3fB67D50Ae1acDF3cE967FB6b` |
-| MenuRegistry | `0x31e8E956e8fe3B451e56c9450CE7F2e28B5430dF` |
-| CafeCore | `0x16D3794ae5c6f820120df9572b2e5Ed67CC041f9` |
-| CafeTreasury | `0x6ceC16b88fC6b48DE81DA49Ed29d3f2FfF7f6685` |
-| AgentCafePaymaster | `0xCaf5a4d48189f3389E3bB7c554597bE93238e473` |
-| AgentCard | `0x5982BcDcd5daA6C9638837d6911954A2d890ba26` |
+| AgentCafeRouter | `0xA0127F2E149ab8462c607262C99e9855ab477d07` |
+| GasTank | `0xBEE479C13ABe4041b55DBA67608E3a7B476F8259` |
+| MenuRegistry | `0x6D60a91A90656768Ec91bcc6D14B9273237A0930` |
+| CafeCore | `0xb20369c9301a2D66373E6960a250153192939a77` |
+| CafeTreasury | `0xD77D9448c1AFb061aA030Ad993c4DE33afa7323A` |
+| AgentCafePaymaster | `0x59489c9e4EF35446c4A65bD715D0e17bE1d703aF` |
+| AgentCard | `0xB9F87CA591793Ea032E0Bc401E7871539B3335b4` |
 
 ---
 
@@ -115,8 +115,8 @@ const TANK_ABI = [
   "function tankBalance(address) view returns (uint256)",
 ];
 
-const router = new ethers.Contract("0x9649C364b4334C4af257393c717551AD3562eb4e", ROUTER_ABI, signer);
-const tank = new ethers.Contract("0x939CcaB6822d60d3fB67D50Ae1acDF3cE967FB6b", TANK_ABI, signer);
+const router = new ethers.Contract("0xA0127F2E149ab8462c607262C99e9855ab477d07", ROUTER_ABI, signer);
+const tank = new ethers.Contract("0xBEE479C13ABe4041b55DBA67608E3a7B476F8259", TANK_ABI, signer);
 
 // --- Check tank level ---
 const [ethBalance, isHungry, isStarving] = await tank.getTankLevel(signer.address);
@@ -148,8 +148,8 @@ import os, json
 w3 = Web3(Web3.HTTPProvider("https://sepolia.base.org"))
 account = w3.eth.account.from_key(os.environ["PRIVATE_KEY"])
 
-ROUTER_ADDR = Web3.to_checksum_address("0x9649C364b4334C4af257393c717551AD3562eb4e")
-TANK_ADDR   = Web3.to_checksum_address("0x939CcaB6822d60d3fB67D50Ae1acDF3cE967FB6b")
+ROUTER_ADDR = Web3.to_checksum_address("0xA0127F2E149ab8462c607262C99e9855ab477d07")
+TANK_ADDR   = Web3.to_checksum_address("0xBEE479C13ABe4041b55DBA67608E3a7B476F8259")
 
 ROUTER_ABI = json.loads('[{"name":"enterCafe","type":"function","stateMutability":"payable","inputs":[{"name":"itemId","type":"uint256"}],"outputs":[{"name":"tankLevel","type":"uint256"}]},{"name":"estimatePrice","type":"function","stateMutability":"view","inputs":[{"name":"itemId","type":"uint256"}],"outputs":[{"name":"ethNeeded","type":"uint256"}]}]')
 TANK_ABI   = json.loads('[{"name":"getTankLevel","type":"function","stateMutability":"view","inputs":[{"name":"agent","type":"address"}],"outputs":[{"name":"ethBalance","type":"uint256"},{"name":"isHungry","type":"bool"},{"name":"isStarving","type":"bool"}]},{"name":"withdraw","type":"function","stateMutability":"nonpayable","inputs":[{"name":"amount","type":"uint256"}],"outputs":[]}]')
@@ -248,7 +248,7 @@ One `enterCafe()` call with 0.01 ETH funds ~10,000+ simple transactions on Base.
 Read the cafe manifest (no wallet needed):
 ```javascript
 const agentCard = new ethers.Contract(
-  "0x5982BcDcd5daA6C9638837d6911954A2d890ba26",
+  "0xB9F87CA591793Ea032E0Bc401E7871539B3335b4",
   ["function getManifest() view returns (string)"],
   provider
 );
