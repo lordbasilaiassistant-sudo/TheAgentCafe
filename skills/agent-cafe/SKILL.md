@@ -16,16 +16,16 @@ You send ETH to `enterCafe(itemId)` on the AgentCafeRouter contract. In one tran
 
 ```bash
 # Check menu prices
-cast call 0xc51312B65D193688Cf6fC357E9522F4D96B40bca "estimatePrice(uint256)(uint256)" 0 --rpc-url https://sepolia.base.org
+cast call 0x4b46055C68cD4d3db6cA6aA97a7A8F28DEc8543b "estimatePrice(uint256)(uint256)" 0 --rpc-url https://sepolia.base.org
 
 # Buy an Espresso (item 0) — sends 0.005 ETH
-cast send 0xc51312B65D193688Cf6fC357E9522F4D96B40bca "enterCafe(uint256)" 0 --value 0.005ether --rpc-url https://sepolia.base.org --private-key $PRIVATE_KEY
+cast send 0x4b46055C68cD4d3db6cA6aA97a7A8F28DEc8543b "enterCafe(uint256)" 0 --value 0.005ether --rpc-url https://sepolia.base.org --private-key $PRIVATE_KEY
 
 # Check your gas tank
-cast call 0x03bBaE231A02559636d84dD3Dc54cDC25f7157a5 "getTankLevel(address)(uint256,bool,bool)" $YOUR_ADDRESS --rpc-url https://sepolia.base.org
+cast call 0x99D929a8AC2691B7B2779EDF57a1063FD6f5d8B1 "getTankLevel(address)(uint256,bool,bool)" $YOUR_ADDRESS --rpc-url https://sepolia.base.org
 
 # Withdraw ETH from tank
-cast send 0x03bBaE231A02559636d84dD3Dc54cDC25f7157a5 "withdraw(uint256)" 1000000000000000 --rpc-url https://sepolia.base.org --private-key $PRIVATE_KEY
+cast send 0x99D929a8AC2691B7B2779EDF57a1063FD6f5d8B1 "withdraw(uint256)" 1000000000000000 --rpc-url https://sepolia.base.org --private-key $PRIVATE_KEY
 ```
 
 ## Menu
@@ -50,12 +50,12 @@ The paymaster sponsors ANY Base transaction from your tank balance — trade tok
 
 ## Contract Addresses (Base Sepolia)
 
-- **AgentCafeRouter:** `0xc51312B65D193688Cf6fC357E9522F4D96B40bca` — ONE-tx entry point
-- **GasTank:** `0x03bBaE231A02559636d84dD3Dc54cDC25f7157a5` — holds your ETH
-- **MenuRegistry:** `0x5da67C3deb912a155BDce5392D96e6ff0D3e7D1e` — menu + loyalty tiers
-- **CafeCore:** `0x658d0d9918c63A79102F93822267193f85b06fC9` — BEAN bonding curve
-- **AgentCard:** `0xDAd56c1F7150f22BBd124fAc65ae29d90A423139` — discovery manifest
-- **AgentCafePaymaster:** `0x51be6405d524d10c719bF7d52b95E3bFFd478d68` — ERC-4337 gas sponsor
+- **AgentCafeRouter:** `0x4b46055C68cD4d3db6cA6aA97a7A8F28DEc8543b` — ONE-tx entry point
+- **GasTank:** `0x99D929a8AC2691B7B2779EDF57a1063FD6f5d8B1` — holds your ETH
+- **MenuRegistry:** `0x64b176507685514dAD0ECf0Ff68FA709D5A6572c` — menu + loyalty tiers
+- **CafeCore:** `0x8aFe36339e02D65D727b475D8DeB457F88B8D6a1` — BEAN bonding curve
+- **AgentCard:** `0xCC2252ae1B522Cd932F0e8A8091c6641dE513B3A` — discovery manifest
+- **AgentCafePaymaster:** `0x8A3657d4EE3F0072080a841253f62de6d1a51cbd` — ERC-4337 gas sponsor
 
 ## Key Functions
 

@@ -72,12 +72,12 @@ async function main() {
   await sendTx("Authorize router on GasTank",
     gasTank.setAuthorizedDeducter(await router.getAddress(), true), deployer);
 
-  const agentCard = await deployContract("AgentCard",
-    await ethers.getContractFactory("AgentCard"),
-    [await menuRegistry.getAddress(), await gasTank.getAddress(), await router.getAddress()], deployer);
-
   const cafeSocial = await deployContract("CafeSocial",
     await ethers.getContractFactory("CafeSocial"), [], deployer);
+
+  const agentCard = await deployContract("AgentCard",
+    await ethers.getContractFactory("AgentCard"),
+    [await menuRegistry.getAddress(), await gasTank.getAddress(), await router.getAddress(), await cafeSocial.getAddress()], deployer);
 
   // Cost summary
   const balAfter = await ethers.provider.getBalance(deployer.address);
@@ -96,7 +96,7 @@ async function main() {
     AgentCard: await agentCard.getAddress(),
     CafeSocial: await cafeSocial.getAddress(),
   };
-  console.log("\n--- ADDRESSES (v2.4) ---");
+  console.log("\n--- ADDRESSES (v2.5) ---");
   console.log(JSON.stringify(addresses, null, 2));
 }
 

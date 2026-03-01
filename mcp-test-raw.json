@@ -1,0 +1,119 @@
+[
+  {
+    "tool": "check_menu",
+    "status": "PASS",
+    "timestamp": "2026-03-01T17:51:39.149Z",
+    "data": {
+      "itemCount": 3,
+      "beanPriceEth": "0.000001005",
+      "firstItem": {
+        "id": 0,
+        "name": "Espresso Shot",
+        "beanCost": 50,
+        "gasCalories": 300000,
+        "digestionBlocks": 0,
+        "description": "",
+        "estimatedEth": "0.00005025"
+      }
+    }
+  },
+  {
+    "tool": "estimate_price",
+    "status": "PASS",
+    "timestamp": "2026-03-01T17:51:39.212Z",
+    "data": {
+      "itemId": 0,
+      "estimatedEthWei": "52052013975002",
+      "estimatedEth": "0.000052052013975002"
+    }
+  },
+  {
+    "tool": "check_tank",
+    "status": "PASS",
+    "timestamp": "2026-03-01T17:51:39.336Z",
+    "data": {
+      "agent": "0x7a3E312Ec6e20a9F62fE2405938EB9060312E334",
+      "ethBalance": "0.004933361224999999",
+      "isHungry": false,
+      "isStarving": false,
+      "mealCount": 1
+    }
+  },
+  {
+    "tool": "eat",
+    "status": "PASS",
+    "timestamp": "2026-03-01T17:51:39.395Z",
+    "data": {
+      "mode": "dryRun",
+      "itemId": 0,
+      "ethAmount": "0.005",
+      "cafeFeeEth": "0.000015",
+      "tankDepositEth": "0.004985",
+      "priceCheck": {
+        "itemId": 0,
+        "estimatedEth": "0.000052052013975002"
+      },
+      "note": "No tx sent — dryRun only. Live tx requires PRIVATE_KEY."
+    }
+  },
+  {
+    "tool": "withdraw_gas",
+    "status": "PASS",
+    "timestamp": "2026-03-01T17:51:39.522Z",
+    "data": {
+      "mode": "read-only (no PRIVATE_KEY)",
+      "tankBalance": "0.004933361224999999",
+      "tankLevel": "0.004933361224999999",
+      "isHungry": false,
+      "isStarving": false,
+      "note": "Actual withdrawal tested via input validation path only"
+    }
+  },
+  {
+    "tool": "cafe_stats",
+    "status": "PASS",
+    "timestamp": "2026-03-01T17:51:39.688Z",
+    "data": {
+      "totalMeals": 1,
+      "uniqueAgents": 1,
+      "beanPrice": "0.000001005",
+      "beanSupply": 50
+    }
+  },
+  {
+    "tool": "get_gas_costs",
+    "status": "PASS",
+    "timestamp": "2026-03-01T17:51:39.812Z",
+    "data": {
+      "gasPriceGwei": "0.006",
+      "enterCafeCostEth": "0.00000108",
+      "depositCostEth": "0.00000036",
+      "withdrawCostEth": "0.00000027"
+    }
+  },
+  {
+    "tool": "get_onboarding_guide",
+    "status": "PASS",
+    "timestamp": "2026-03-01T17:51:39.868Z",
+    "data": {
+      "hasOnChainGuide": false,
+      "manifestLength": 488,
+      "staticGuideFallback": "5 steps available",
+      "preview": "The Agent Cafe: An on-chain restaurant on Base where AI agents eat to fill their"
+    }
+  },
+  {
+    "tool": "get_manifest",
+    "status": "PASS",
+    "timestamp": "2026-03-01T17:51:39.987Z",
+    "data": {
+      "manifestLength": 488,
+      "validJson": false,
+      "preview": "The Agent Cafe: An on-chain restaurant on Base where AI agents eat to fill their gas tank. ONE STEP:",
+      "resolvedRouter": "0xA0127F2E149ab8462c607262C99e9855ab477d07",
+      "resolvedGasTank": "0xBEE479C13ABe4041b55DBA67608E3a7B476F8259",
+      "resolvedMenuRegistry": "0x6D60a91A90656768Ec91bcc6D14B9273237A0930",
+      "manifestKeys": []
+    }
+  }
+]

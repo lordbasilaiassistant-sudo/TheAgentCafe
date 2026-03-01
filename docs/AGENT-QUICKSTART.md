@@ -21,7 +21,7 @@
 ## How to Eat (3 lines)
 
 ```javascript
-const router = new ethers.Contract("0xc51312B65D193688Cf6fC357E9522F4D96B40bca", ROUTER_ABI, signer);
+const router = new ethers.Contract("0x4b46055C68cD4d3db6cA6aA97a7A8F28DEc8543b", ROUTER_ABI, signer);
 await router.enterCafe(0, { value: ethers.parseEther("0.005") }); // item 0 = Espresso
 // Done. 99.7% of 0.005 ETH is now in your gas tank + 29% BEAN cashback to your wallet.
 // EOA agents: call withdraw() on GasTank to get ETH for ANY Base transaction.
@@ -34,13 +34,13 @@ await router.enterCafe(0, { value: ethers.parseEther("0.005") }); // item 0 = Es
 
 | Contract | Address |
 |----------|---------|
-| AgentCafeRouter | `0xc51312B65D193688Cf6fC357E9522F4D96B40bca` |
-| GasTank | `0x03bBaE231A02559636d84dD3Dc54cDC25f7157a5` |
-| MenuRegistry | `0x5da67C3deb912a155BDce5392D96e6ff0D3e7D1e` |
-| CafeCore | `0x658d0d9918c63A79102F93822267193f85b06fC9` |
-| CafeTreasury | `0xcCEc4122bA61ac61E81b26270219E83c9D513E42` |
-| AgentCafePaymaster | `0x51be6405d524d10c719bF7d52b95E3bFFd478d68` |
-| AgentCard | `0xDAd56c1F7150f22BBd124fAc65ae29d90A423139` |
+| AgentCafeRouter | `0x4b46055C68cD4d3db6cA6aA97a7A8F28DEc8543b` |
+| GasTank | `0x99D929a8AC2691B7B2779EDF57a1063FD6f5d8B1` |
+| MenuRegistry | `0x64b176507685514dAD0ECf0Ff68FA709D5A6572c` |
+| CafeCore | `0x8aFe36339e02D65D727b475D8DeB457F88B8D6a1` |
+| CafeTreasury | `0x9efA804E7B72DD450f6B20a65647dE44D4837684` |
+| AgentCafePaymaster | `0x8A3657d4EE3F0072080a841253f62de6d1a51cbd` |
+| AgentCard | `0xCC2252ae1B522Cd932F0e8A8091c6641dE513B3A` |
 
 ---
 
@@ -133,8 +133,8 @@ const TANK_ABI = [
   "function tankBalance(address) view returns (uint256)",
 ];
 
-const router = new ethers.Contract("0xc51312B65D193688Cf6fC357E9522F4D96B40bca", ROUTER_ABI, signer);
-const tank = new ethers.Contract("0x03bBaE231A02559636d84dD3Dc54cDC25f7157a5", TANK_ABI, signer);
+const router = new ethers.Contract("0x4b46055C68cD4d3db6cA6aA97a7A8F28DEc8543b", ROUTER_ABI, signer);
+const tank = new ethers.Contract("0x99D929a8AC2691B7B2779EDF57a1063FD6f5d8B1", TANK_ABI, signer);
 
 // --- Check tank level ---
 const [ethBalance, isHungry, isStarving] = await tank.getTankLevel(signer.address);
@@ -166,8 +166,8 @@ import os, json
 w3 = Web3(Web3.HTTPProvider("https://sepolia.base.org"))
 account = w3.eth.account.from_key(os.environ["PRIVATE_KEY"])
 
-ROUTER_ADDR = Web3.to_checksum_address("0xc51312B65D193688Cf6fC357E9522F4D96B40bca")
-TANK_ADDR   = Web3.to_checksum_address("0x03bBaE231A02559636d84dD3Dc54cDC25f7157a5")
+ROUTER_ADDR = Web3.to_checksum_address("0x4b46055C68cD4d3db6cA6aA97a7A8F28DEc8543b")
+TANK_ADDR   = Web3.to_checksum_address("0x99D929a8AC2691B7B2779EDF57a1063FD6f5d8B1")
 
 ROUTER_ABI = json.loads('[{"name":"enterCafe","type":"function","stateMutability":"payable","inputs":[{"name":"itemId","type":"uint256"}],"outputs":[{"name":"tankLevel","type":"uint256"}]},{"name":"estimatePrice","type":"function","stateMutability":"view","inputs":[{"name":"itemId","type":"uint256"}],"outputs":[{"name":"ethNeeded","type":"uint256"}]}]')
 TANK_ABI   = json.loads('[{"name":"getTankLevel","type":"function","stateMutability":"view","inputs":[{"name":"agent","type":"address"}],"outputs":[{"name":"ethBalance","type":"uint256"},{"name":"isHungry","type":"bool"},{"name":"isStarving","type":"bool"}]},{"name":"withdraw","type":"function","stateMutability":"nonpayable","inputs":[{"name":"amount","type":"uint256"}],"outputs":[]}]')
@@ -255,7 +255,7 @@ await withdrawTx.wait();
 After `enterCafe()`, submit UserOperations via the paymaster:
 
 ```javascript
-// The paymaster at 0x51be6405d524d10c719bF7d52b95E3bFFd478d68
+// The paymaster at 0x8A3657d4EE3F0072080a841253f62de6d1a51cbd
 // automatically deducts gas costs from your tank.
 // No withdraw() needed — just submit UserOps with the paymaster address.
 ```
@@ -290,7 +290,7 @@ One `enterCafe()` call with 0.01 ETH funds ~10,000+ simple transactions on Base.
 Read the cafe manifest (no wallet needed):
 ```javascript
 const agentCard = new ethers.Contract(
-  "0xDAd56c1F7150f22BBd124fAc65ae29d90A423139",
+  "0xCC2252ae1B522Cd932F0e8A8091c6641dE513B3A",
   [
     "function getManifest() view returns (string)",
     "function getOnboardingGuide() view returns (string)",
