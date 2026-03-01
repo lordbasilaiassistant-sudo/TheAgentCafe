@@ -5,7 +5,8 @@
 // ============================================================
 
 const CONFIG = {
-  rpcUrl: 'https://mainnet.base.org',
+  rpcUrl: 'https://base-mainnet.public.blastapi.io',
+  rpcFallback: 'https://mainnet.base.org',
   chainId: 8453,
   chainName: 'Base',
 
@@ -120,6 +121,15 @@ async function init() {
   initContracts(provider);
   initRainOverlay();
 
+  // Test RPC connection, fallback if needed
+  try {
+    await provider.getBlockNumber();
+  } catch {
+    console.warn('Primary RPC failed, trying fallback...');
+    provider = new ethers.JsonRpcProvider(CONFIG.rpcFallback);
+    initContracts(provider);
+  }
+
   await Promise.all([
     loadStats(),
     loadPrices(),
@@ -170,38 +180,56 @@ function initRainOverlay() {
 // Data Loading
 // ============================================================
 async function loadStats() {
+  // Separate try/catch for each contract to prevent one failure from blocking others
+
+  // 1. Meal + agent counts
   try {
-    if (contracts.AgentCard) {
-      const [totalMeals, uniqueAgents] = await contracts.AgentCard.getCafeStats();
-      animateNumber('stat-meals', Number(totalMeals));
-      animateNumber('stat-agents', Number(uniqueAgents));
-    } else if (contracts.MenuRegistry) {
+    if (contracts.MenuRegistry) {
       const meals = await contracts.MenuRegistry.totalMealsServed();
       const agents = await contracts.MenuRegistry.totalAgentsServed();
       animateNumber('stat-meals', Number(meals));
       animateNumber('stat-agents', Number(agents));
     }
+  } catch (e) {
+    console.warn('Stats meals:', e.message);
+    // Fallback: try AgentCard
+    try {
+      if (contracts.AgentCard) {
+        const [totalMeals, uniqueAgents] = await contracts.AgentCard.getCafeStats();
+        animateNumber('stat-meals', Number(totalMeals));
+        animateNumber('stat-agents', Number(uniqueAgents));
+      }
+    } catch {}
+  }
 
+  // 2. BEAN price
+  try {
     if (contracts.CafeCore) {
       const price = await contracts.CafeCore.currentPrice();
-      const supply = await contracts.CafeCore.totalSupply();
-
-      // BEAN price — use smart denomination for tiny prices
       el('stat-bean-price').textContent = formatBeanPrice(price);
-
-      // BEAN supply — show raw value for tiny supplies, formatted for large
-      el('stat-bean-supply').textContent = formatBeanSupply(supply);
-
-      // Treasury — total ETH locked in protocol
-      try {
-        const reserve = await contracts.CafeCore.ethReserve();
-        el('stat-treasury').textContent = formatEthShort(reserve);
-      } catch {
-        el('stat-treasury').textContent = '0 ETH';
-      }
     }
   } catch (e) {
-    console.warn('Stats load:', e.message);
+    console.warn('Stats price:', e.message);
+  }
+
+  // 3. BEAN supply
+  try {
+    if (contracts.CafeCore) {
+      const supply = await contracts.CafeCore.totalSupply();
+      el('stat-bean-supply').textContent = formatBeanSupply(supply);
+    }
+  } catch (e) {
+    console.warn('Stats supply:', e.message);
+  }
+
+  // 4. Treasury (ETH reserve)
+  try {
+    if (contracts.CafeCore) {
+      const reserve = await contracts.CafeCore.ethReserve();
+      el('stat-treasury').textContent = formatEthShort(reserve);
+    }
+  } catch (e) {
+    el('stat-treasury').textContent = '0 ETH';
   }
 }
 
