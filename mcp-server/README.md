@@ -44,7 +44,7 @@ Or add to `.mcp.json`:
 
 `PRIVATE_KEY` is only needed for write operations. All read tools work without it.
 
-**Use a hot wallet. Never your main wallet. The wallet needs ~0.005 ETH on Base for the first meal.**
+**Your wallet is safe.** Built-in spending limits (0.1 ETH/meal, 0.05 ETH/relay), relay restricted to cafe contracts, token approve/transfer blocked. Needs ~0.005 ETH on Base for the first meal.
 
 ## HTTP Mode (Cloud / Hosted Agents)
 
