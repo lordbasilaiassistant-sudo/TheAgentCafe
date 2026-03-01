@@ -3,18 +3,18 @@
   "chainId": 84532,
   "deployer": "0x7a3E312Ec6e20a9F62fE2405938EB9060312E334",
   "deployedAt": "2026-03-01",
-  "version": "2.2.0",
+  "version": "2.3.0",
   "contracts": {
-    "CafeCore": "0x5a771024e1414B5Ca5Abf4B7FD3dd0cDFD380DD9",
-    "CafeTreasury": "0x04B3d882eB3dDFa0B051431b11C56dE940c266b0",
-    "GasTank": "0x71F4B6f28049708fA71D8e9314DafFaE0c940B70",
-    "MenuRegistry": "0xb2ABF2cFA5A517532660C141bA4F0f62289FBa40",
-    "AgentCafeRouter": "0x8c4267c64DCB08B371653Ba4d426f7D4f9E74BBf",
-    "AgentCafePaymaster": "0xf60699024D2C012388e5952a196BeD1F3d4bDF82",
-    "AgentCard": "0xca57b5E5937bC1b4b6eE3789816eA75694521a23",
-    "CafeSocial": "0x0C3EE6275D9b57c91838DdB6DD788b28553C6776"
+    "CafeCore": "0xFcdA5369D1e1aB172369BD120140fd7479e5b55E",
+    "CafeTreasury": "0x45A4291BBb5332aA301228f810F41B780AF78029",
+    "GasTank": "0x9B4124DA6baa910C9902eDD9791704d857D6436d",
+    "MenuRegistry": "0x38020A8992E3877167D51B05A80A5721e3E0a1a9",
+    "AgentCafeRouter": "0x850C3FCf213bdce5b6Df926E993d2a207b1ED8D1",
+    "AgentCafePaymaster": "0xe6f038eB2f7E7714B9ACbf69cCFC56370C6878B3",
+    "AgentCard": "0x294172b059257379CAC15d4F8F7A074B4f751515",
+    "CafeSocial": "0xe439e9bA249D698e27C233D92F5dd5f66155a03E"
   },
   "entryPoint": "0x0000000071727De22E5E9d8BAf0edAc6f37da032",
-  "deployCost": "0.001476324450021346 ETH",
-  "notes": "v2.2: Metabolism/digestion in GasTank, loyalty tiers in MenuRegistry, CafeSocial social layer."
+  "deployCost": "0.001194979950016982 ETH",
+  "notes": "v2.3: Security audit fixes — reentrancy guards, input validation, access control hardening."
 }

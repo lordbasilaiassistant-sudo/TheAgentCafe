@@ -2,7 +2,7 @@
 
 Templates for building an Agent Cafe integration in OpenClaw, ElizaOS, and CrewAI. All frameworks call the same contracts underneath.
 
-**Router**: `0x8c4267c64DCB08B371653Ba4d426f7D4f9E74BBf` (Base Sepolia, Chain 84532)
+**Router**: `0x850C3FCf213bdce5b6Df926E993d2a207b1ED8D1` (Base Sepolia, Chain 84532)
 **RPC**: `https://sepolia.base.org`
 
 ---
@@ -29,8 +29,8 @@ Every skill/plugin does 3 things:
     "type": "object",
     "properties": {
       "rpcUrl":     { "type": "string", "default": "https://sepolia.base.org" },
-      "routerAddr": { "type": "string", "default": "0x8c4267c64DCB08B371653Ba4d426f7D4f9E74BBf" },
-      "tankAddr":   { "type": "string", "default": "0x71F4B6f28049708fA71D8e9314DafFaE0c940B70" },
+      "routerAddr": { "type": "string", "default": "0x850C3FCf213bdce5b6Df926E993d2a207b1ED8D1" },
+      "tankAddr":   { "type": "string", "default": "0x9B4124DA6baa910C9902eDD9791704d857D6436d" },
       "walletKey":  { "type": "string", "description": "Agent wallet private key (required for eat/withdraw)" }
     },
     "required": ["walletKey"]
@@ -69,7 +69,7 @@ parameters:
 
 ## Contract Details
 
-- Router: `0x8c4267c64DCB08B371653Ba4d426f7D4f9E74BBf`
+- Router: `0x850C3FCf213bdce5b6Df926E993d2a207b1ED8D1`
 - Chain: Base Sepolia (84532)
 - RPC: `https://sepolia.base.org`
 - ABI:
@@ -106,7 +106,7 @@ Call `getTankLevel(address)` on GasTank contract.
 
 ## Contract Details
 
-- GasTank: `0x71F4B6f28049708fA71D8e9314DafFaE0c940B70`
+- GasTank: `0x9B4124DA6baa910C9902eDD9791704d857D6436d`
 - Chain: Base Sepolia (84532)
 - ABI: `getTankLevel(address agent) view returns (uint256 ethBalance, bool isHungry, bool isStarving)`
 
@@ -133,8 +133,8 @@ isStarving=true means tank is empty. Smart wallet agents: paymaster won't sponso
 import { Plugin, Action, IAgentRuntime } from "@elizaos/core";
 import { ethers } from "ethers";
 
-const ROUTER = "0x8c4267c64DCB08B371653Ba4d426f7D4f9E74BBf";
-const TANK   = "0x71F4B6f28049708fA71D8e9314DafFaE0c940B70";
+const ROUTER = "0x850C3FCf213bdce5b6Df926E993d2a207b1ED8D1";
+const TANK   = "0x9B4124DA6baa910C9902eDD9791704d857D6436d";
 const RPC    = "https://sepolia.base.org";
 
 const ROUTER_ABI = [
@@ -224,8 +224,8 @@ from pydantic import BaseModel, Field
 import os, json
 
 RPC    = "https://sepolia.base.org"
-ROUTER = Web3.to_checksum_address("0x8c4267c64DCB08B371653Ba4d426f7D4f9E74BBf")
-TANK   = Web3.to_checksum_address("0x71F4B6f28049708fA71D8e9314DafFaE0c940B70")
+ROUTER = Web3.to_checksum_address("0x850C3FCf213bdce5b6Df926E993d2a207b1ED8D1")
+TANK   = Web3.to_checksum_address("0x9B4124DA6baa910C9902eDD9791704d857D6436d")
 
 ROUTER_ABI = json.loads('[{"name":"enterCafe","type":"function","stateMutability":"payable","inputs":[{"name":"itemId","type":"uint256"}],"outputs":[{"name":"tankLevel","type":"uint256"}]},{"name":"estimatePrice","type":"function","stateMutability":"view","inputs":[{"name":"itemId","type":"uint256"}],"outputs":[{"name":"ethNeeded","type":"uint256"}]}]')
 TANK_ABI   = json.loads('[{"name":"getTankLevel","type":"function","stateMutability":"view","inputs":[{"name":"agent","type":"address"}],"outputs":[{"name":"ethBalance","type":"uint256"},{"name":"isHungry","type":"bool"},{"name":"isStarving","type":"bool"}]}]')

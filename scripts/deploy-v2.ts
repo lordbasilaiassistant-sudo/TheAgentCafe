@@ -118,7 +118,7 @@ async function main() {
     chainId: Number(network.chainId),
     deployer: deployer.address,
     deployedAt: new Date().toISOString().split("T")[0],
-    version: "2.2.0",
+    version: "2.3.0",
     contracts: {
       CafeCore: deployed.CafeCore,
       CafeTreasury: deployed.CafeTreasury,
@@ -131,7 +131,7 @@ async function main() {
     },
     entryPoint: ENTRY_POINT,
     deployCost: ethers.formatEther(deployCost) + " ETH",
-    notes: "v2.2: Metabolism/digestion in GasTank, loyalty tiers in MenuRegistry, CafeSocial social layer.",
+    notes: "v2.3: Security audit fixes — reentrancy guards, input validation, access control hardening.",
   };
 
   const outPath = path.join(__dirname, "..", "deployments.json");

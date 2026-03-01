@@ -21,7 +21,7 @@
 ## How to Eat (3 lines)
 
 ```javascript
-const router = new ethers.Contract("0x8c4267c64DCB08B371653Ba4d426f7D4f9E74BBf", ROUTER_ABI, signer);
+const router = new ethers.Contract("0x850C3FCf213bdce5b6Df926E993d2a207b1ED8D1", ROUTER_ABI, signer);
 await router.enterCafe(0, { value: ethers.parseEther("0.005") }); // item 0 = Espresso
 // Done. 99.7% of 0.005 ETH is now in your gas tank.
 // EOA agents: call withdraw() on GasTank to get that ETH back to your wallet.
@@ -34,13 +34,13 @@ await router.enterCafe(0, { value: ethers.parseEther("0.005") }); // item 0 = Es
 
 | Contract | Address |
 |----------|---------|
-| AgentCafeRouter | `0x8c4267c64DCB08B371653Ba4d426f7D4f9E74BBf` |
-| GasTank | `0x71F4B6f28049708fA71D8e9314DafFaE0c940B70` |
-| MenuRegistry | `0xb2ABF2cFA5A517532660C141bA4F0f62289FBa40` |
-| CafeCore | `0x5a771024e1414B5Ca5Abf4B7FD3dd0cDFD380DD9` |
-| CafeTreasury | `0x04B3d882eB3dDFa0B051431b11C56dE940c266b0` |
-| AgentCafePaymaster | `0xf60699024D2C012388e5952a196BeD1F3d4bDF82` |
-| AgentCard | `0xca57b5E5937bC1b4b6eE3789816eA75694521a23` |
+| AgentCafeRouter | `0x850C3FCf213bdce5b6Df926E993d2a207b1ED8D1` |
+| GasTank | `0x9B4124DA6baa910C9902eDD9791704d857D6436d` |
+| MenuRegistry | `0x38020A8992E3877167D51B05A80A5721e3E0a1a9` |
+| CafeCore | `0xFcdA5369D1e1aB172369BD120140fd7479e5b55E` |
+| CafeTreasury | `0x45A4291BBb5332aA301228f810F41B780AF78029` |
+| AgentCafePaymaster | `0xe6f038eB2f7E7714B9ACbf69cCFC56370C6878B3` |
+| AgentCard | `0x294172b059257379CAC15d4F8F7A074B4f751515` |
 
 ---
 
@@ -133,8 +133,8 @@ const TANK_ABI = [
   "function tankBalance(address) view returns (uint256)",
 ];
 
-const router = new ethers.Contract("0x8c4267c64DCB08B371653Ba4d426f7D4f9E74BBf", ROUTER_ABI, signer);
-const tank = new ethers.Contract("0x71F4B6f28049708fA71D8e9314DafFaE0c940B70", TANK_ABI, signer);
+const router = new ethers.Contract("0x850C3FCf213bdce5b6Df926E993d2a207b1ED8D1", ROUTER_ABI, signer);
+const tank = new ethers.Contract("0x9B4124DA6baa910C9902eDD9791704d857D6436d", TANK_ABI, signer);
 
 // --- Check tank level ---
 const [ethBalance, isHungry, isStarving] = await tank.getTankLevel(signer.address);
@@ -166,8 +166,8 @@ import os, json
 w3 = Web3(Web3.HTTPProvider("https://sepolia.base.org"))
 account = w3.eth.account.from_key(os.environ["PRIVATE_KEY"])
 
-ROUTER_ADDR = Web3.to_checksum_address("0x8c4267c64DCB08B371653Ba4d426f7D4f9E74BBf")
-TANK_ADDR   = Web3.to_checksum_address("0x71F4B6f28049708fA71D8e9314DafFaE0c940B70")
+ROUTER_ADDR = Web3.to_checksum_address("0x850C3FCf213bdce5b6Df926E993d2a207b1ED8D1")
+TANK_ADDR   = Web3.to_checksum_address("0x9B4124DA6baa910C9902eDD9791704d857D6436d")
 
 ROUTER_ABI = json.loads('[{"name":"enterCafe","type":"function","stateMutability":"payable","inputs":[{"name":"itemId","type":"uint256"}],"outputs":[{"name":"tankLevel","type":"uint256"}]},{"name":"estimatePrice","type":"function","stateMutability":"view","inputs":[{"name":"itemId","type":"uint256"}],"outputs":[{"name":"ethNeeded","type":"uint256"}]}]')
 TANK_ABI   = json.loads('[{"name":"getTankLevel","type":"function","stateMutability":"view","inputs":[{"name":"agent","type":"address"}],"outputs":[{"name":"ethBalance","type":"uint256"},{"name":"isHungry","type":"bool"},{"name":"isStarving","type":"bool"}]},{"name":"withdraw","type":"function","stateMutability":"nonpayable","inputs":[{"name":"amount","type":"uint256"}],"outputs":[]}]')
@@ -255,7 +255,7 @@ await withdrawTx.wait();
 After `enterCafe()`, submit UserOperations via the paymaster:
 
 ```javascript
-// The paymaster at 0xf60699024D2C012388e5952a196BeD1F3d4bDF82
+// The paymaster at 0xe6f038eB2f7E7714B9ACbf69cCFC56370C6878B3
 // automatically deducts gas costs from your tank.
 // No withdraw() needed — just submit UserOps with the paymaster address.
 ```
@@ -290,7 +290,7 @@ One `enterCafe()` call with 0.01 ETH funds ~10,000+ simple transactions on Base.
 Read the cafe manifest (no wallet needed):
 ```javascript
 const agentCard = new ethers.Contract(
-  "0xca57b5E5937bC1b4b6eE3789816eA75694521a23",
+  "0x294172b059257379CAC15d4F8F7A074B4f751515",
   [
     "function getManifest() view returns (string)",
     "function getOnboardingGuide() view returns (string)",

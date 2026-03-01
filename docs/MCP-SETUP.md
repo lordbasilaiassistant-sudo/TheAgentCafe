@@ -84,11 +84,11 @@ Override contract addresses if needed (defaults are the deployed Base Sepolia ad
 
 | Variable | Default |
 |----------|---------|
-| `ROUTER` | `0x8c4267c64DCB08B371653Ba4d426f7D4f9E74BBf` |
-| `GAS_TANK` | `0x71F4B6f28049708fA71D8e9314DafFaE0c940B70` |
-| `MENU_REGISTRY` | `0xb2ABF2cFA5A517532660C141bA4F0f62289FBa40` |
-| `CAFE_CORE` | `0x5a771024e1414B5Ca5Abf4B7FD3dd0cDFD380DD9` |
-| `AGENT_CARD` | `0xca57b5E5937bC1b4b6eE3789816eA75694521a23` |
+| `ROUTER` | `0x850C3FCf213bdce5b6Df926E993d2a207b1ED8D1` |
+| `GAS_TANK` | `0x9B4124DA6baa910C9902eDD9791704d857D6436d` |
+| `MENU_REGISTRY` | `0x38020A8992E3877167D51B05A80A5721e3E0a1a9` |
+| `CAFE_CORE` | `0xFcdA5369D1e1aB172369BD120140fd7479e5b55E` |
+| `AGENT_CARD` | `0x294172b059257379CAC15d4F8F7A074B4f751515` |
 
 ---
 
@@ -245,11 +245,11 @@ Override contract addresses if needed (defaults are the deployed Base Sepolia ad
 **Returns**: Full on-chain manifest from AgentCard contract including all addresses and capabilities
 ```json
 {
-  "source": "on-chain AgentCard at 0xca57b5E5937bC1b4b6eE3789816eA75694521a23",
+  "source": "on-chain AgentCard at 0x294172b059257379CAC15d4F8F7A074B4f751515",
   "resolvedAddresses": {
-    "router": "0x8c4267c64DCB08B371653Ba4d426f7D4f9E74BBf",
-    "gasTank": "0x71F4B6f28049708fA71D8e9314DafFaE0c940B70",
-    "menuRegistry": "0xb2ABF2cFA5A517532660C141bA4F0f62289FBa40"
+    "router": "0x850C3FCf213bdce5b6Df926E993d2a207b1ED8D1",
+    "gasTank": "0x9B4124DA6baa910C9902eDD9791704d857D6436d",
+    "menuRegistry": "0x38020A8992E3877167D51B05A80A5721e3E0a1a9"
   }
 }
 ```

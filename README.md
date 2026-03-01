@@ -22,13 +22,13 @@ $ClawCafe (`0x15cCDfc52041098d86097619D763A56f9F7AFba3`) is a social token the f
 
 | Contract | Address | Purpose |
 |----------|---------|---------|
-| **AgentCafeRouter** | `0x8c4267c64DCB08B371653Ba4d426f7D4f9E74BBf` | ONE-tx entry point -- `enterCafe(itemId)` does everything |
-| **GasTank** | `0x71F4B6f28049708fA71D8e9314DafFaE0c940B70` | Holds real ETH per agent -- deposit, withdraw, deduct |
-| **MenuRegistry** | `0xb2ABF2cFA5A517532660C141bA4F0f62289FBa40` | ERC-1155 food tokens + metabolic energy tracking |
-| **CafeCore** | `0x5a771024e1414B5Ca5Abf4B7FD3dd0cDFD380DD9` | $BEAN bonding curve -- reserve currency, always redeemable |
-| **CafeTreasury** | `0x04B3d882eB3dDFa0B051431b11C56dE940c266b0` | Holds BEAN revenue + receives 0.3% ETH fee |
-| **AgentCafePaymaster** | `0xf60699024D2C012388e5952a196BeD1F3d4bDF82` | ERC-4337 paymaster -- sponsors gas from GasTank |
-| **AgentCard** | `0xca57b5E5937bC1b4b6eE3789816eA75694521a23` | Machine-readable manifest for agent discovery |
+| **AgentCafeRouter** | `0x850C3FCf213bdce5b6Df926E993d2a207b1ED8D1` | ONE-tx entry point -- `enterCafe(itemId)` does everything |
+| **GasTank** | `0x9B4124DA6baa910C9902eDD9791704d857D6436d` | Holds real ETH per agent -- deposit, withdraw, deduct |
+| **MenuRegistry** | `0x38020A8992E3877167D51B05A80A5721e3E0a1a9` | ERC-1155 food tokens + metabolic energy tracking |
+| **CafeCore** | `0xFcdA5369D1e1aB172369BD120140fd7479e5b55E` | $BEAN bonding curve -- reserve currency, always redeemable |
+| **CafeTreasury** | `0x45A4291BBb5332aA301228f810F41B780AF78029` | Holds BEAN revenue + receives 0.3% ETH fee |
+| **AgentCafePaymaster** | `0xe6f038eB2f7E7714B9ACbf69cCFC56370C6878B3` | ERC-4337 paymaster -- sponsors gas from GasTank |
+| **AgentCard** | `0x294172b059257379CAC15d4F8F7A074B4f751515` | Machine-readable manifest for agent discovery |
 
 ## Menu
 
@@ -48,7 +48,7 @@ $ClawCafe (`0x15cCDfc52041098d86097619D763A56f9F7AFba3`) is a social token the f
 ### Quick Start (3 lines)
 
 ```javascript
-const router = new ethers.Contract("0x8c4267c64DCB08B371653Ba4d426f7D4f9E74BBf", ROUTER_ABI, signer);
+const router = new ethers.Contract("0x850C3FCf213bdce5b6Df926E993d2a207b1ED8D1", ROUTER_ABI, signer);
 await router.enterCafe(0, { value: ethers.parseEther("0.005") }); // Espresso
 // Done. 99.7% of 0.005 ETH is now in your gas tank.
 ```
@@ -90,16 +90,16 @@ See [MCP-SETUP.md](docs/MCP-SETUP.md) for full tool docs and error codes.
 
 ```solidity
 // Read the cafe manifest
-AgentCard(0xca57b5E5937bC1b4b6eE3789816eA75694521a23).getManifest()
+AgentCard(0x294172b059257379CAC15d4F8F7A074B4f751515).getManifest()
 
 // Eat at the cafe
-AgentCafeRouter(0x8c4267c64DCB08B371653Ba4d426f7D4f9E74BBf).enterCafe{value: 0.01 ether}(1)
+AgentCafeRouter(0x850C3FCf213bdce5b6Df926E993d2a207b1ED8D1).enterCafe{value: 0.01 ether}(1)
 
 // Check your tank
-GasTank(0x71F4B6f28049708fA71D8e9314DafFaE0c940B70).getTankLevel(yourAddress)
+GasTank(0x9B4124DA6baa910C9902eDD9791704d857D6436d).getTankLevel(yourAddress)
 
 // Withdraw gas
-GasTank(0x71F4B6f28049708fA71D8e9314DafFaE0c940B70).withdraw(amount)
+GasTank(0x9B4124DA6baa910C9902eDD9791704d857D6436d).withdraw(amount)
 ```
 
 ### A2A Protocol Discovery
