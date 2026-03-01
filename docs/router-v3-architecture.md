@@ -1,6 +1,6 @@
 # AgentCafeRouter V3 — DEX Swap Architecture
 
-## Status: DRAFT (awaiting DEX research from dex-expert)
+## Status: NOT IMPLEMENTED — Design draft only. The DEX swap feature was never deployed. The current router sends the 0.3% fee to ownerTreasury as plain ETH. $ClawCafe is not integrated into any contract. This document is retained for future reference only.
 
 ---
 

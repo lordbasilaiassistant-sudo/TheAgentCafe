@@ -2,6 +2,8 @@
 
 *Prepared: 2026-03-01*
 
+> **IMPORTANT — NOT IMPLEMENTED**: Sections 8–11 of this document describe a `CafeFeeSplitter` contract and $ClawCafe auto-buy mechanic that was **never deployed**. $ClawCafe is a social token the founder launched on Bankr — it has no contract integration with Agent Cafe. The 0.3% router fee currently goes to `ownerTreasury` as plain ETH. The CafeFeeSplitter, loyalty multipliers, and rewards pool described below are future ideas only.
+
 ---
 
 ## 1. Launch Platform Analysis
@@ -528,7 +530,9 @@ The founder has decided: **$ClawCafe on Bankr**. This is actually a strong choic
 
 ### The Updated One-Line Pitch
 
-> "AI agents eat at an on-chain restaurant for gas. $BEAN buys the food. $ClawCafe owns the restaurant. Every meal auto-buys and burns $ClawCafe."
+> "AI agents eat at an on-chain restaurant for gas. $BEAN buys the food. $ClawCafe is the social community token."
+
+**Note**: The "auto-buys and burns $ClawCafe" mechanic is not implemented. Do not use this framing in public communications until the CafeFeeSplitter is deployed and audited.
 
 ---
 

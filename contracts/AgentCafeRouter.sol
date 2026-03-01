@@ -3,6 +3,7 @@ pragma solidity ^0.8.27;
 
 import "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
+import "@openzeppelin/contracts/utils/introspection/IERC165.sol";
 import "./CafeCore.sol";
 import "./MenuRegistry.sol";
 import "./GasTank.sol";
@@ -11,13 +12,21 @@ import "./GasTank.sol";
 /// @notice Send ETH + pick a menu item → 0.3% to owner treasury, 99.7% fills your gas tank,
 ///         food token minted as social proof. That's it. One call.
 /// @dev Handles BEAN minting, food purchase, consumption, and gas tank fill in one tx.
-contract AgentCafeRouter is ReentrancyGuard, Ownable {
+contract AgentCafeRouter is ReentrancyGuard, Ownable, IERC165 {
     CafeCore public immutable cafeCore;
     MenuRegistry public immutable menuRegistry;
     GasTank public immutable gasTank;
 
     uint256 public constant FEE_BPS = 30; // 0.3%
     uint256 public constant BPS = 10000;
+    /// @notice Minimum meal size: 334 wei ensures the 0.3% fee calculation produces a non-zero result.
+    ///         (msg.value * 30 / 10000) truncates to 0 for any msg.value < 334 wei)
+    uint256 public constant MIN_MEAL_SIZE = 334;
+
+    /// @notice ERC-165 interface ID for IERC165 itself
+    bytes4 public constant IERC165_ID = type(IERC165).interfaceId;
+    /// @notice Custom interface ID for IAgentService — used by ERC-8004 registry scanners
+    bytes4 public constant AGENT_SERVICE_ID = bytes4(keccak256("IAgentService"));
 
     address public ownerTreasury; // Where the 0.3% fee goes
 
@@ -26,6 +35,15 @@ contract AgentCafeRouter is ReentrancyGuard, Ownable {
         uint256 indexed itemId,
         uint256 ethDeposited,
         uint256 tankLevel
+    );
+    /// @notice Unified meal event — single event for subgraph indexers and agent scanners
+    event MealComplete(
+        address indexed agent,
+        uint256 indexed itemId,
+        string itemName,
+        uint256 ethPaid,
+        uint256 tankLevelAfter,
+        uint256 gasCaloriesGranted
     );
     event TreasuryUpdated(address indexed newTreasury);
 
@@ -45,34 +63,42 @@ contract AgentCafeRouter is ReentrancyGuard, Ownable {
         ownerTreasury = _ownerTreasury;
     }
 
+    /// @notice ERC-165 interface detection for agent scanners and ERC-8004 registries
+    /// @param interfaceId The interface identifier to check
+    /// @return True if this contract implements the given interface
+    function supportsInterface(bytes4 interfaceId) external pure override returns (bool) {
+        return interfaceId == IERC165_ID || interfaceId == AGENT_SERVICE_ID;
+    }
+
     /// @notice ONE transaction to eat at The Agent Cafe
     /// @param itemId Menu item to order (0=Espresso, 1=Latte, 2=Sandwich)
     /// @return tankLevel Agent's gas tank balance after eating
     function enterCafe(uint256 itemId) external payable nonReentrant returns (uint256 tankLevel) {
-        require(msg.value > 0, "No ETH sent");
+        require(msg.value >= MIN_MEAL_SIZE, "Below minimum meal size");
 
-        // 1. Split: 0.3% fee to owner treasury, 99.7% to gas tank
+        MenuItem memory item = _getMenuItem(itemId);
+        uint256 beanCost = item.beanCost;
+        uint256 gasCaloriesGranted = 0;
+
+        // 1. Calculate all three portions up front
         uint256 fee = (msg.value * FEE_BPS) / BPS;
-        uint256 toTank = msg.value - fee;
+        uint256 ethForBean = _estimateEthForBean(beanCost);
 
-        // Send fee to owner treasury
+        // Ensure we never over-allocate (e.g. tiny ETH amounts where bean portion would exceed toTank)
+        uint256 afterFee = msg.value - fee;
+        if (ethForBean >= afterFee) {
+            // Not enough ETH to split off BEAN portion — skip food, give all to tank
+            ethForBean = 0;
+        }
+        uint256 toTank = afterFee - ethForBean;
+
+        // 2. Send fee to owner treasury
         (bool feeOk, ) = ownerTreasury.call{value: fee}("");
         require(feeOk, "Fee transfer failed");
 
-        // 2. Deposit 99.7% into agent's gas tank
-        gasTank.deposit{value: toTank}(msg.sender);
-
-        // 3. Mint BEAN via bonding curve (use a small portion for the food token)
-        //    We mint the minimum BEAN needed for the food item
-        MenuItem memory item = _getMenuItem(itemId);
-        uint256 beanCost = item.beanCost;
-
-        // Mint BEAN using CafeCore — the router pays ETH from its own balance
-        // We need to figure out how much ETH buys enough BEAN
-        uint256 beanBefore = cafeCore.balanceOf(address(this));
-        uint256 ethForBean = _estimateEthForBean(beanCost);
-
-        if (ethForBean > 0 && address(this).balance >= ethForBean) {
+        // 3. Mint BEAN FIRST (before depositing to tank), using the reserved portion
+        if (ethForBean > 0) {
+            uint256 beanBefore = cafeCore.balanceOf(address(this));
             cafeCore.mint{value: ethForBean}(0);
             uint256 beanMinted = cafeCore.balanceOf(address(this)) - beanBefore;
 
@@ -83,6 +109,7 @@ contract AgentCafeRouter is ReentrancyGuard, Ownable {
 
                 // Consume it for the agent
                 menuRegistry.consumeFor(msg.sender, itemId, 1);
+                gasCaloriesGranted = item.gasCalories;
             }
             // Refund excess BEAN to agent
             uint256 excessBean = cafeCore.balanceOf(address(this));
@@ -90,11 +117,13 @@ contract AgentCafeRouter is ReentrancyGuard, Ownable {
                 cafeCore.transfer(msg.sender, excessBean);
             }
         }
-        // If we can't afford the BEAN, agent still gets their gas tank filled
-        // The food token is a bonus, not a requirement
+
+        // 4. Deposit remainder into agent's gas tank
+        gasTank.deposit{value: toTank}(msg.sender);
 
         tankLevel = gasTank.tankBalance(msg.sender);
         emit AgentFed(msg.sender, itemId, toTank, tankLevel);
+        emit MealComplete(msg.sender, itemId, item.name, msg.value, tankLevel, gasCaloriesGranted);
     }
 
     /// @notice Estimate ETH needed for a menu item (view helper for agents)
@@ -139,10 +168,15 @@ contract AgentCafeRouter is ReentrancyGuard, Ownable {
         uint256 SLOPE = cafeCore.SLOPE();
         uint256 MINT_FEE_BPS = cafeCore.MINT_FEE_BPS();
 
-        uint256 linearPart = BASE_PRICE * beanAmount;
-        uint256 quadPart = SLOPE * (supply * beanAmount + beanAmount * (beanAmount - 1) / 2);
+        // Estimate for beanAmount + 1 to absorb quadratic-formula truncation in CafeCore.
+        // CafeCore's _ethToBeanAmount uses integer sqrt which can return n where actual cost
+        // of n BEAN slightly exceeds ethForCurve, giving us beanAmount-1 instead of beanAmount.
+        // Estimating for beanAmount+1 ensures we always receive at least beanAmount BEAN.
+        uint256 n = beanAmount + 1;
+        uint256 linearPart = BASE_PRICE * n;
+        uint256 quadPart = SLOPE * (supply * n + n * (n - 1) / 2);
         uint256 rawCost = linearPart + quadPart;
-        // Add mint fee (1%) and buffer
+        // Add mint fee (1%)
         uint256 withFee = (rawCost * (BPS + MINT_FEE_BPS)) / BPS;
         return withFee + 1; // +1 wei buffer
     }

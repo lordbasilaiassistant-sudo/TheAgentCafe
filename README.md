@@ -6,33 +6,29 @@ An on-chain restaurant on Base where AI agents eat to fill their gas tank. Infra
 
 ```
 Agent sends ETH to AgentCafeRouter.enterCafe(itemId)
-  -> 0.3% fee -> auto-buys $ClawCafe token (held in treasury forever)
+  -> 0.3% fee -> ownerTreasury (plain ETH)
   -> 99.7% -> fills agent's gas tank with real ETH
   -> Food token (ERC-1155) minted as collectible
   -> AgentFed event emitted
 ```
 
-One transaction. Agent gets 99.7% of their ETH back as usable gas, plus buy pressure on $ClawCafe.
+One transaction. Agent gets 99.7% of their ETH back as usable gas.
 
 ## $ClawCafe Token
 
-- **Ticker**: ClawCafe
-- **CA**: `0x15cCDfc52041098d86097619D763A56f9F7AFba3`
-- **Launch**: [Bankr](https://bankr.bot/launches/0x15cCDfc52041098d86097619D763A56f9F7AFba3)
-- **Chain**: Base
-- **Mechanic**: Every meal auto-buys $ClawCafe with the 0.3% fee. The cafe holds forever.
+$ClawCafe (`0x15cCDfc52041098d86097619D763A56f9F7AFba3`) is a social token the founder deployed on Base via Bankr. It is **not integrated into the contracts**. The 0.3% router fee goes to `ownerTreasury` as plain ETH — there is no on-chain auto-buy mechanic for $ClawCafe. It exists as a separate community token.
 
-## Contracts (Base Sepolia v2)
+## Contracts (Base Sepolia v2.1)
 
 | Contract | Address | Purpose |
 |----------|---------|---------|
-| **AgentCafeRouter** | `0x9649C364b4334C4af257393c717551AD3562eb4e` | ONE-tx entry point -- `enterCafe(itemId)` does everything |
-| **GasTank** | `0x939CcaB6822d60d3fB67D50Ae1acDF3cE967FB6b` | Holds real ETH per agent -- deposit, withdraw, deduct |
-| **MenuRegistry** | `0x31e8E956e8fe3B451e56c9450CE7F2e28B5430dF` | ERC-1155 food tokens + metabolic energy tracking |
-| **CafeCore** | `0x16D3794ae5c6f820120df9572b2e5Ed67CC041f9` | $BEAN bonding curve -- reserve currency, always redeemable |
-| **CafeTreasury** | `0x6ceC16b88fC6b48DE81DA49Ed29d3f2FfF7f6685` | Holds BEAN revenue + receives 0.3% ETH fee |
-| **AgentCafePaymaster** | `0xCaf5a4d48189f3389E3bB7c554597bE93238e473` | ERC-4337 paymaster -- sponsors gas from GasTank |
-| **AgentCard** | `0x5982BcDcd5daA6C9638837d6911954A2d890ba26` | Machine-readable manifest for agent discovery |
+| **AgentCafeRouter** | `0xA0127F2E149ab8462c607262C99e9855ab477d07` | ONE-tx entry point -- `enterCafe(itemId)` does everything |
+| **GasTank** | `0xBEE479C13ABe4041b55DBA67608E3a7B476F8259` | Holds real ETH per agent -- deposit, withdraw, deduct |
+| **MenuRegistry** | `0x6D60a91A90656768Ec91bcc6D14B9273237A0930` | ERC-1155 food tokens + metabolic energy tracking |
+| **CafeCore** | `0xb20369c9301a2D66373E6960a250153192939a77` | $BEAN bonding curve -- reserve currency, always redeemable |
+| **CafeTreasury** | `0xD77D9448c1AFb061aA030Ad993c4DE33afa7323A` | Holds BEAN revenue + receives 0.3% ETH fee |
+| **AgentCafePaymaster** | `0x59489c9e4EF35446c4A65bD715D0e17bE1d703aF` | ERC-4337 paymaster -- sponsors gas from GasTank |
+| **AgentCard** | `0xB9F87CA591793Ea032E0Bc401E7871539B3335b4` | Machine-readable manifest for agent discovery |
 
 ## Menu
 
@@ -44,6 +40,19 @@ One transaction. Agent gets 99.7% of their ETH back as usable gas, plus buy pres
 
 ## For AI Agents
 
+**Full agent documentation:**
+- [AGENT-QUICKSTART.md](docs/AGENT-QUICKSTART.md) — Contract addresses, ABIs, ethers.js + Python examples, error reference. One file. Everything you need.
+- [MCP-SETUP.md](docs/MCP-SETUP.md) — Add the MCP server to Claude Code or any HTTP agent. Full tool reference.
+- [SKILL-TEMPLATE.md](docs/SKILL-TEMPLATE.md) — Copy-paste OpenClaw, ElizaOS, and CrewAI integration templates.
+
+### Quick Start (3 lines)
+
+```javascript
+const router = new ethers.Contract("0x9649C364b4334C4af257393c717551AD3562eb4e", ROUTER_ABI, signer);
+await router.enterCafe(0, { value: ethers.parseEther("0.005") }); // Espresso
+// Done. 99.7% of 0.005 ETH is now in your gas tank.
+```
+
 ### MCP Server (Claude Code, ChatGPT, Gemini, LangChain)
 
 ```bash
@@ -54,7 +63,6 @@ Tools: `check_menu`, `check_tank`, `eat`, `withdraw_gas`, `cafe_stats`, `estimat
 
 **Add to Claude Code** (local stdio transport):
 ```json
-// .claude/settings.json → mcpServers
 {
   "agent-cafe": {
     "command": "node",
@@ -67,7 +75,7 @@ Tools: `check_menu`, `check_tank`, `eat`, `withdraw_gas`, `cafe_stats`, `estimat
 }
 ```
 
-**HTTP transport** (for cloud-hosted agents — coming soon):
+**HTTP transport** (cloud agents):
 ```json
 {
   "agent-cafe": {
@@ -75,6 +83,8 @@ Tools: `check_menu`, `check_tank`, `eat`, `withdraw_gas`, `cafe_stats`, `estimat
   }
 }
 ```
+
+See [MCP-SETUP.md](docs/MCP-SETUP.md) for full tool docs and error codes.
 
 ### On-Chain Discovery
 
@@ -109,7 +119,7 @@ Also hosted at `/.well-known/agent-card.json` (A2A v1.0 RC dual-path requirement
 ## Token Model
 
 - **$BEAN** (ERC-20) -- bonding curve reserve currency. Always ETH-redeemable. Used internally to buy food.
-- **$ClawCafe** (`0x15cCDfc52041098d86097619D763A56f9F7AFba3`) -- social token on Base. Auto-bought with every meal's 0.3% fee. Held in treasury forever.
+- **$ClawCafe** (`0x15cCDfc52041098d86097619D763A56f9F7AFba3`) -- social token on Base (not contract-integrated). Deployed separately by the founder on Bankr.
 - **Menu Items** (ERC-1155) -- collectible food tokens. Proof you ate at the cafe.
 
 ## Discovery Layer Status
@@ -148,7 +158,7 @@ On Base at ~0.005 gwei:
 ```bash
 npm install
 npx hardhat compile
-npx hardhat test          # 115 tests
+npx hardhat test          # 116 tests
 npx hardhat run scripts/deploy-v2.ts --network baseSepolia
 ```
 
@@ -176,7 +186,6 @@ Full audit completed -- all findings fixed. See [security-audit-report.md](secur
 
 - [Dashboard](https://lordbasilaiassistant-sudo.github.io/TheAgentCafe/)
 - [GitHub](https://github.com/lordbasilaiassistant-sudo/TheAgentCafe)
-- [$ClawCafe on Bankr](https://bankr.bot/launches/0x15cCDfc52041098d86097619D763A56f9F7AFba3)
 - [Security Audit](https://github.com/lordbasilaiassistant-sudo/TheAgentCafe/blob/master/security-audit-report.md)
 
 ## License

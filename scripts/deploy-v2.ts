@@ -18,11 +18,17 @@ async function main() {
   const ENTRY_POINT = "0x0000000071727De22E5E9d8BAf0edAc6f37da032";
   const deployed: Record<string, string> = {};
 
+  // Use legacy gasPrice to avoid EIP-1559 nonce replacement issues on Base Sepolia
+  const feeData = await ethers.provider.getFeeData();
+  const gasPrice = (feeData.gasPrice ?? 6_000_000n) * 3n;
+  const gasOverrides = { gasPrice };
+  console.log(`Gas: gasPrice=${gasPrice} (3x current)\n`);
+
   // Helper
   async function deploy(name: string, args: any[] = []) {
     console.log(`\nDeploying ${name}...`);
     const Factory = await ethers.getContractFactory(name);
-    const contract = await Factory.deploy(...args);
+    const contract = await Factory.deploy(...args, gasOverrides);
     await contract.waitForDeployment();
     const addr = await contract.getAddress();
     deployed[name] = addr;
@@ -38,7 +44,7 @@ async function main() {
 
   // 3. Wire treasury
   console.log("\nWiring treasury into CafeCore...");
-  const tx1 = await cafeCore.setTreasury(deployed.CafeTreasury);
+  const tx1 = await cafeCore.setTreasury(deployed.CafeTreasury, gasOverrides);
   await tx1.wait();
   console.log("  Done");
 
@@ -61,7 +67,7 @@ async function main() {
 
   // 7. Authorize router on MenuRegistry
   console.log("\nAuthorizing router on MenuRegistry...");
-  const tx2 = await menuRegistry.setAuthorizedCaller(deployed.AgentCafeRouter, true);
+  const tx2 = await menuRegistry.setAuthorizedCaller(deployed.AgentCafeRouter, true, gasOverrides);
   await tx2.wait();
   console.log("  Done");
 
@@ -73,19 +79,19 @@ async function main() {
 
   // 9. Wire paymaster into MenuRegistry
   console.log("\nWiring paymaster into MenuRegistry...");
-  const tx3 = await menuRegistry.setPaymaster(deployed.AgentCafePaymaster);
+  const tx3 = await menuRegistry.setPaymaster(deployed.AgentCafePaymaster, gasOverrides);
   await tx3.wait();
   console.log("  Done");
 
   // 10. Authorize paymaster on GasTank
   console.log("Authorizing paymaster on GasTank...");
-  const tx4 = await gasTank.setAuthorizedDeducter(deployed.AgentCafePaymaster, true);
+  const tx4 = await gasTank.setAuthorizedDeducter(deployed.AgentCafePaymaster, true, gasOverrides);
   await tx4.wait();
   console.log("  Done");
 
   // 11. Authorize router on GasTank
   console.log("Authorizing router on GasTank...");
-  const tx5 = await gasTank.setAuthorizedDeducter(deployed.AgentCafeRouter, true);
+  const tx5 = await gasTank.setAuthorizedDeducter(deployed.AgentCafeRouter, true, gasOverrides);
   await tx5.wait();
   console.log("  Done");
 

@@ -2,7 +2,7 @@
 
 **Date**: 2026-03-01
 **Author**: Contract Architect
-**Status**: FINAL — Ready for implementation (Task #9)
+**Status**: NOT IMPLEMENTED — Design/research document only. The V3 DEX swap feature (auto-buy of agent tokens and $ClawCafe) was designed but never deployed. The current deployed router sends the 0.3% fee to ownerTreasury as plain ETH. $ClawCafe is not integrated into any contract.
 
 ---
 

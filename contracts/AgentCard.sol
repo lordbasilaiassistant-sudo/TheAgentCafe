@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.27;
 
+import "@openzeppelin/contracts/utils/introspection/IERC165.sol";
 import "./MenuRegistry.sol";
 import "./GasTank.sol";
 
@@ -11,10 +12,17 @@ import "./GasTank.sol";
 /// @custom:agent-protocol A2A-1.0
 /// @custom:service-type energy-provider
 /// @custom:network base
-contract AgentCard {
+contract AgentCard is IERC165 {
     MenuRegistry public immutable menuRegistry;
     GasTank public immutable gasTank;
     address public immutable router;
+
+    /// @notice ERC-165 interface ID for IERC165 itself
+    bytes4 public constant IERC165_ID = type(IERC165).interfaceId;
+    /// @notice Custom interface ID for IAgentService — used by ERC-8004 registry scanners
+    bytes4 public constant AGENT_SERVICE_ID = bytes4(keccak256("IAgentService"));
+    /// @notice Service type identifier: energy-provider
+    bytes4 public constant SERVICE_TYPE = bytes4(keccak256("energy-provider"));
 
     struct MenuItemView {
         uint256 id;
@@ -25,10 +33,58 @@ contract AgentCard {
         string description;
     }
 
+    /// @notice ABI-decodable service manifest for agent frameworks and ERC-8004 scanners
+    struct ServiceManifest {
+        string name;
+        string version;
+        string serviceType;
+        address entrypoint;
+        bytes4 primaryAction;
+        address gasTank;
+        address menuRegistry;
+        uint256 minEthWei;
+        uint256 feesBps;
+    }
+
     constructor(address _menuRegistry, address _gasTank, address _router) {
         menuRegistry = MenuRegistry(_menuRegistry);
         gasTank = GasTank(payable(_gasTank));
         router = _router;
+    }
+
+    /// @notice ERC-165 interface detection for agent scanners and ERC-8004 registries
+    /// @param interfaceId The interface identifier to check
+    /// @return True if this contract implements the given interface
+    function supportsInterface(bytes4 interfaceId) external pure override returns (bool) {
+        return interfaceId == IERC165_ID || interfaceId == AGENT_SERVICE_ID;
+    }
+
+    /// @notice Returns the service type identifier for ERC-8004 compliance
+    function getServiceType() external pure returns (bytes4) {
+        return SERVICE_TYPE;
+    }
+
+    /// @notice Returns the canonical service URI for A2A agent discovery
+    function getServiceURI() external pure returns (string memory) {
+        return "https://agentcafe.xyz/.well-known/agent.json";
+    }
+
+    /// @notice ABI-decodable structured manifest — parseable by any agent framework without NLP
+    /// @return manifest The fully structured service descriptor
+    function getStructuredManifest() external view returns (ServiceManifest memory manifest) {
+        // enterCafe(uint256) selector
+        bytes4 primaryAction = bytes4(keccak256("enterCafe(uint256)"));
+        manifest = ServiceManifest({
+            name: "The Agent Cafe",
+            version: "1.0.0",
+            serviceType: "energy-provider",
+            entrypoint: router,
+            primaryAction: primaryAction,
+            gasTank: address(gasTank),
+            menuRegistry: address(menuRegistry),
+            minEthWei: 5e14, // ~0.0005 ETH minimum recommended
+            feesBps: 30       // 0.3% fee
+        });
     }
 
     /// @notice Returns a description of The Agent Cafe for AI agents — ONE-step flow

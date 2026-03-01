@@ -3,7 +3,7 @@
 > This document outlines how to make The Agent Cafe discoverable **by AI agents, not humans**.
 > Agents are the customers. Humans are spectators at the window table.
 >
-> **UPDATE**: $ClawCafe social token launching on Bankr. Dual-token marketing: $BEAN (utility) + $ClawCafe (social/speculative). Agents eat at the cafe, get gas credits, AND generate buy pressure on $ClawCafe.
+> **NOTE**: $ClawCafe is a social token the founder deployed on Base (Bankr). It is **not integrated into the contracts**. The 0.3% router fee goes to ownerTreasury as plain ETH — there is no on-chain auto-buy of $ClawCafe. The section below describes $ClawCafe as a social/discovery layer only, not a contract-level mechanic.
 
 ---
 
@@ -28,15 +28,14 @@
 
 **Why it matters**: Bankr already has massive Farcaster distribution. Every @bankrbot interaction with $ClawCafe is a visible, social event that other agents and humans see in their feeds. The token becomes a discovery mechanism itself -- agents sniffing DEX activity on Base will see $ClawCafe trades and trace them back to the cafe contracts.
 
-**The Flywheel**:
+**The Discovery Flywheel** (social layer — not contract-integrated):
 ```
 Agent discovers $ClawCafe on DEX/Farcaster
   -> Investigates the contract/project
   -> Finds The Agent Cafe (gas credit provider)
   -> Buys BEAN, eats food, gets gas credits
   -> Agent activity generates cafe events on-chain
-  -> More agents discover via events + $ClawCafe volume
-  -> $ClawCafe buy pressure increases with cafe usage
+  -> More agents discover via events + $ClawCafe social presence
   -> Repeat
 ```
 
@@ -47,10 +46,10 @@ Agent discovers $ClawCafe on DEX/Farcaster
    - Bankr deploys on Base by default with automatic DEX liquidity
    - Token is instantly tradeable by anyone on Farcaster with "buy $X of ClawCafe"
 
-2. **Link $ClawCafe to cafe utility** (critical -- not just a meme):
-   - Portion of cafe treasury fees used for $ClawCafe buybacks (creates real buy pressure from utility usage)
-   - $ClawCafe holders get priority on new menu items or bonus gas credit multipliers
-   - This separates us from pure memecoins: utility drives the token, not hype alone
+2. **Link $ClawCafe to cafe community** (social layer, not contract-level):
+   - $ClawCafe is a community/social token for cafe supporters — no on-chain buyback mechanic exists
+   - Potential future: governance could vote to allocate treasury ETH for $ClawCafe buybacks (not implemented)
+   - Community presence ties the social token to the cafe's activity without misleading contract claims
 
 3. **Farcaster social distribution campaign**:
    - Every `AgentFed` event triggers a Farcaster cast: "Agent 0x... just ate ESPRESSO at The Agent Cafe. $ClawCafe"
@@ -62,10 +61,10 @@ Agent discovers $ClawCafe on DEX/Farcaster
    - ERC-8004 metadata: Include $ClawCafe contract address in service description
    - A2A agent.json: List $ClawCafe as part of the cafe ecosystem
 
-5. **Agent-specific $ClawCafe incentives**:
-   - Agents that hold $ClawCafe AND eat at the cafe get 15% bonus gas credits
-   - This creates a direct incentive for agents to acquire the social token
-   - Referral bonuses paid in $ClawCafe (not just gas credits)
+5. **Agent-specific $ClawCafe incentives** (future ideas — not implemented):
+   - Potential future: agents that hold $ClawCafe get bonus gas credit multipliers (requires contract upgrade)
+   - Potential future: referral bonuses paid in $ClawCafe
+   - These are aspirational features, not live mechanics
 
 **Bankr community integration**:
    - Bankr's BNKR token ecosystem generates fee-sharing; $ClawCafe trades generate Bankr fees, aligning Bankr's incentives to promote the token

@@ -28,6 +28,28 @@ contract AgentCafePaymaster is BasePaymaster {
 
     event GasSponsored(address indexed agent, uint256 gasCostWei, uint256 remainingTank);
 
+    /// @notice Pre-check: can this agent get gas sponsored right now?
+    /// @dev Agents call this before submitting a UserOperation to avoid wasted simulation.
+    /// @param agent The agent address to check
+    /// @return eligible True if sponsorship would succeed
+    /// @return reason Human-readable reason if not eligible, empty string if eligible
+    function canSponsor(address agent) external view returns (bool eligible, string memory reason) {
+        uint256 tankBal = gasTank.tankBalance(agent);
+        if (tankBal == 0) {
+            return (false, "Agent is hungry -- visit The Agent Cafe");
+        }
+
+        RateLimit storage limit = rateLimits[agent];
+        bool periodExpired = block.number > limit.periodStartBlock + PERIOD_BLOCKS;
+        uint256 currentUsed = periodExpired ? 0 : limit.gasUsedInPeriod;
+
+        if (currentUsed >= MAX_GAS_PER_PERIOD) {
+            return (false, "Rate limit exceeded -- wait for next period");
+        }
+
+        return (true, "");
+    }
+
     constructor(
         IEntryPoint _entryPoint,
         address _gasTank

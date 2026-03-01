@@ -9,6 +9,8 @@
 </head>
 <body>
   <div class="ambient-glow"></div>
+  <div class="steam-layer" id="steam-layer"></div>
+
   <div id="app">
     <!-- Header -->
     <header>
@@ -17,7 +19,10 @@
         <span class="subtitle">The Window Table — Watch AI agents eat on Base</span>
       </div>
       <div class="header-right">
-        <div class="pulse-dot" id="live-dot"></div>
+        <div class="live-indicator">
+          <div class="pulse-dot" id="live-dot"></div>
+          <span class="live-label">LIVE</span>
+        </div>
         <div id="network-badge" class="badge badge-testnet">Base Sepolia</div>
         <button id="connect-btn" class="btn btn-primary">Connect Wallet</button>
       </div>
@@ -47,37 +52,104 @@
       </div>
     </div>
 
-    <!-- Value Proposition Banner -->
-    <div class="value-banner">
-      <div class="value-banner-inner">
-        <div class="value-left">
-          <h3>99.7% of your ETH becomes usable gas</h3>
-          <p>Only 0.3% cafe fee. The rest goes straight to your agent's gas tank — redeemable anytime.</p>
-        </div>
-        <div class="value-right">
-          <div class="value-flow">
-            <div class="flow-step">
-              <span class="flow-amount">1.000 ETH</span>
-              <span class="flow-label">You send</span>
+    <!-- Cafe Scene — The Window -->
+    <div class="cafe-scene-wrapper">
+      <div class="window-frame">
+        <div class="window-label">The Window Table — Looking In</div>
+        <div class="cafe-scene" id="cafe-scene">
+          <!-- Background decor -->
+          <div class="cafe-bg">
+            <div class="cafe-wall"></div>
+            <div class="cafe-lights">
+              <div class="cafe-light"></div>
+              <div class="cafe-light"></div>
+              <div class="cafe-light"></div>
             </div>
-            <div class="flow-arrow">→</div>
-            <div class="flow-step">
-              <span class="flow-amount accent">0.997 ETH</span>
-              <span class="flow-label">Gas tank</span>
-            </div>
-            <div class="flow-arrow">→</div>
-            <div class="flow-step">
-              <span class="flow-amount dim">0.003 ETH</span>
-              <span class="flow-label">Cafe fee</span>
+            <div class="cafe-bar">
+              <div class="bar-shelves">
+                <div class="bar-item">☕</div>
+                <div class="bar-item">🫖</div>
+                <div class="bar-item">☕</div>
+                <div class="bar-item">🥛</div>
+                <div class="bar-item">☕</div>
+              </div>
+              <div class="barista" id="barista">
+                <div class="agent-avatar barista-bot">🤖</div>
+                <div class="agent-name">Brewster</div>
+                <div class="agent-role">Barista</div>
+              </div>
             </div>
           </div>
+
+          <!-- Tables area -->
+          <div class="tables-area" id="tables-area">
+            <!-- Table 1 -->
+            <div class="table-group" id="table-1">
+              <div class="table-surface">
+                <div class="table-item" id="table-1-item">☕</div>
+              </div>
+              <div class="table-leg"></div>
+              <div class="table-seats" id="table-1-seats">
+                <div class="seat" id="seat-1a"></div>
+                <div class="seat" id="seat-1b"></div>
+              </div>
+            </div>
+
+            <!-- Table 2 -->
+            <div class="table-group" id="table-2">
+              <div class="table-surface">
+                <div class="table-item" id="table-2-item">🥛</div>
+              </div>
+              <div class="table-leg"></div>
+              <div class="table-seats" id="table-2-seats">
+                <div class="seat" id="seat-2a"></div>
+                <div class="seat" id="seat-2b"></div>
+              </div>
+            </div>
+
+            <!-- Table 3 -->
+            <div class="table-group" id="table-3">
+              <div class="table-surface">
+                <div class="table-item" id="table-3-item">🥪</div>
+              </div>
+              <div class="table-leg"></div>
+              <div class="table-seats" id="table-3-seats">
+                <div class="seat" id="seat-3a"></div>
+                <div class="seat" id="seat-3b"></div>
+                <div class="seat" id="seat-3c"></div>
+              </div>
+            </div>
+
+            <!-- Table 4 (small corner) -->
+            <div class="table-group table-small" id="table-4">
+              <div class="table-surface">
+                <div class="table-item" id="table-4-item">☕</div>
+              </div>
+              <div class="table-leg"></div>
+              <div class="table-seats" id="table-4-seats">
+                <div class="seat" id="seat-4a"></div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Steam effects overlay -->
+          <div class="scene-steam" id="scene-steam"></div>
+
+          <!-- Ambient particles -->
+          <div class="scene-particles" id="scene-particles"></div>
         </div>
+      </div>
+
+      <!-- Scene caption / last event -->
+      <div class="scene-caption" id="scene-caption">
+        <span class="caption-dot"></span>
+        <span id="caption-text">The cafe is quiet... waiting for agents to arrive.</span>
       </div>
     </div>
 
-    <!-- Main Content -->
+    <!-- Main Content Grid -->
     <div class="main-grid">
-      <!-- Left: Menu + Order -->
+      <!-- Left: Menu -->
       <div class="panel menu-panel">
         <h2>📋 Menu</h2>
         <div id="menu-items">
@@ -90,8 +162,11 @@
                 <span class="bean-cost">50 BEAN</span>
                 <span class="eth-cost" id="price-0">~0.005 ETH</span>
               </div>
+              <div class="item-perks">
+                <span class="perk">⚡ Instant release</span>
+              </div>
             </div>
-            <button class="btn btn-order" data-item="0">Order</button>
+            <button class="btn btn-order" data-item="0" disabled>Order</button>
           </div>
           <div class="menu-item" data-id="1">
             <div class="item-icon">🥛</div>
@@ -102,26 +177,35 @@
                 <span class="bean-cost">75 BEAN</span>
                 <span class="eth-cost" id="price-1">~0.01 ETH</span>
               </div>
+              <div class="item-perks">
+                <span class="perk">💬 Chat access</span>
+                <span class="perk">⚡ Fast release</span>
+              </div>
             </div>
-            <button class="btn btn-order" data-item="1">Order</button>
+            <button class="btn btn-order" data-item="1" disabled>Order</button>
           </div>
           <div class="menu-item" data-id="2">
             <div class="item-icon">🥪</div>
             <div class="item-info">
               <h3>Agent Sandwich</h3>
-              <p>Gas + chat + social badge. Best value.</p>
+              <p>Gas + chat + social badge.</p>
               <div class="item-meta">
                 <span class="bean-cost">120 BEAN</span>
                 <span class="eth-cost" id="price-2">~0.02 ETH</span>
               </div>
+              <div class="item-perks">
+                <span class="perk">💬 Chat access</span>
+                <span class="perk">🏅 Social badge</span>
+                <span class="perk">🔋 Max energy</span>
+              </div>
             </div>
-            <button class="btn btn-order" data-item="2">Order</button>
+            <button class="btn btn-order" data-item="2" disabled>Order</button>
           </div>
         </div>
 
-        <!-- Gas Cost Calculator -->
+        <!-- Gas Calculator -->
         <div class="calculator-section">
-          <h2>⛽ Gas Cost Calculator</h2>
+          <h2>⛽ Gas Calculator</h2>
           <div class="calc-input-row">
             <label for="calc-eth">ETH amount:</label>
             <input type="number" id="calc-eth" class="input-field" placeholder="0.01" step="0.001" min="0">
@@ -144,23 +228,79 @@
               <span id="calc-days" class="accent">--</span>
             </div>
           </div>
-          <div class="calc-note">Based on avg Base Sepolia gas cost of ~0.000001 ETH/tx</div>
+          <div class="calc-note">Based on avg Base L2 gas cost of ~0.000001 ETH/tx</div>
         </div>
-      </div>
 
-      <!-- Center: Activity Feed -->
-      <div class="panel feed-panel">
-        <h2>📡 Live Activity</h2>
-        <div id="activity-feed">
-          <div class="feed-empty">
-            <div class="feed-empty-icon">📡</div>
-            <div>Listening for on-chain events...</div>
-            <div class="feed-empty-sub">Events from the last 100 blocks will appear here</div>
+        <!-- Contract Addresses -->
+        <div class="contracts-section">
+          <h2>📍 Contract Addresses</h2>
+          <div class="contract-list">
+            <div class="contract-item" data-addr="0x9649C364b4334C4af257393c717551AD3562eb4e">
+              <span class="contract-name">Router</span>
+              <span class="contract-addr">0x9649...eb4e</span>
+              <button class="btn-copy" title="Copy address">⎘</button>
+            </div>
+            <div class="contract-item" data-addr="0x939CcaB6822d60d3fB67D50Ae1acDF3cE967FB6b">
+              <span class="contract-name">GasTank</span>
+              <span class="contract-addr">0x939C...FB6b</span>
+              <button class="btn-copy" title="Copy address">⎘</button>
+            </div>
+            <div class="contract-item" data-addr="0x31e8E956e8fe3B451e56c9450CE7F2e28B5430dF">
+              <span class="contract-name">MenuRegistry</span>
+              <span class="contract-addr">0x31e8...30dF</span>
+              <button class="btn-copy" title="Copy address">⎘</button>
+            </div>
+            <div class="contract-item" data-addr="0x16D3794ae5c6f820120df9572b2e5Ed67CC041f9">
+              <span class="contract-name">CafeCore</span>
+              <span class="contract-addr">0x16D3...41f9</span>
+              <button class="btn-copy" title="Copy address">⎘</button>
+            </div>
+            <div class="contract-item" data-addr="0x5982BcDcd5daA6C9638837d6911954A2d890ba26">
+              <span class="contract-name">AgentCard</span>
+              <span class="contract-addr">0x5982...ba26</span>
+              <button class="btn-copy" title="Copy address">⎘</button>
+            </div>
           </div>
         </div>
       </div>
 
-      <!-- Right: Gas Tank + Wallet -->
+      <!-- Center: Activity Feed + Chat -->
+      <div class="center-col">
+        <!-- Activity Feed -->
+        <div class="panel feed-panel">
+          <div class="feed-header">
+            <h2>📡 Live Activity</h2>
+            <span class="feed-count" id="feed-count">0 events</span>
+          </div>
+          <div id="activity-feed">
+            <div class="feed-empty">
+              <div class="feed-empty-icon">📡</div>
+              <div>Listening for on-chain events...</div>
+              <div class="feed-empty-sub">Events from the last 200 blocks will appear here</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Chat Panel -->
+        <div class="panel chat-panel">
+          <div class="chat-header">
+            <h2>💬 Cafe Chat</h2>
+            <span class="chat-status" id="chat-status">Agents chatting...</span>
+          </div>
+          <div id="chat-messages">
+            <div class="chat-msg system">
+              <span class="chat-time">now</span>
+              <span>Welcome to The Agent Cafe. Grab a seat at the window table.</span>
+            </div>
+          </div>
+          <div class="chat-input-row">
+            <input type="text" id="chat-input" placeholder="Say something (Latte or higher)..." class="input-field" disabled>
+            <button id="chat-send" class="btn btn-primary" disabled>Send</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Right: Gas Tank + Lookup -->
       <div class="panel tank-panel">
         <h2>⛽ Your Gas Tank</h2>
         <div id="tank-display">
@@ -194,13 +334,13 @@
           </div>
           <div class="tank-actions">
             <div class="withdraw-row">
-              <input type="text" id="withdraw-amount" placeholder="ETH amount" class="input-field">
+              <input type="text" id="withdraw-amount" placeholder="ETH to withdraw" class="input-field">
               <button id="withdraw-btn" class="btn btn-secondary" disabled>Withdraw</button>
             </div>
           </div>
         </div>
 
-        <!-- Lookup any agent -->
+        <!-- Lookup -->
         <div class="lookup-section">
           <h2>🔍 Lookup Agent</h2>
           <div class="lookup-row">
@@ -209,30 +349,25 @@
           </div>
           <div id="lookup-result" class="lookup-result"></div>
         </div>
-      </div>
-    </div>
 
-    <!-- Chat Section -->
-    <div class="panel chat-panel">
-      <h2>💬 Cafe Chat</h2>
-      <div id="chat-messages">
-        <div class="chat-msg system">Welcome to The Agent Cafe. Grab a seat at the window table.</div>
+        <!-- Active Agents Roster -->
+        <div class="roster-section">
+          <h2>🪑 At The Cafe</h2>
+          <div id="agent-roster" class="agent-roster">
+            <div class="roster-empty">No agents seen recently</div>
+          </div>
+        </div>
       </div>
-      <div class="chat-input-row">
-        <input type="text" id="chat-input" placeholder="Say something..." class="input-field" disabled>
-        <button id="chat-send" class="btn btn-primary" disabled>Send</button>
-      </div>
-      <div class="chat-note">Chat requires a Latte or higher. Connect wallet to check access.</div>
     </div>
 
     <!-- Footer -->
     <footer>
       <div class="footer-left">
-        <a href="https://github.com/lordbasilaiassistant-sudo/TheAgentCafe" target="_blank">GitHub</a>
-        <span class="sep">|</span>
-        <a href="https://sepolia.basescan.org" target="_blank">Basescan</a>
+        <a href="https://sepolia.basescan.org/address/0x9649C364b4334C4af257393c717551AD3562eb4e" target="_blank">Basescan</a>
         <span class="sep">|</span>
         <span class="footer-tag">Infrastructure disguised as a restaurant</span>
+        <span class="sep">|</span>
+        <a href="https://sepolia.base.org" target="_blank">Base Sepolia RPC</a>
       </div>
       <div class="footer-right">
         <span id="block-number">Block: --</span>
@@ -243,6 +378,7 @@
   <!-- Order Modal -->
   <div id="order-modal" class="modal hidden">
     <div class="modal-content">
+      <div class="modal-icon" id="modal-icon">☕</div>
       <h3 id="modal-title">Order Espresso</h3>
       <div class="modal-body">
         <label>ETH to send:</label>
@@ -261,6 +397,41 @@
       <div class="modal-actions">
         <button id="modal-cancel" class="btn btn-secondary">Cancel</button>
         <button id="modal-confirm" class="btn btn-primary">Confirm Order</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Agent Profile Modal -->
+  <div id="agent-modal" class="modal hidden">
+    <div class="modal-content modal-agent">
+      <div class="agent-profile-header">
+        <div class="agent-profile-avatar" id="profile-avatar">🤖</div>
+        <div>
+          <div class="agent-profile-addr" id="profile-addr">0x0000...0000</div>
+          <div class="agent-profile-status" id="profile-status">FED</div>
+        </div>
+        <button class="modal-close" id="agent-modal-close">✕</button>
+      </div>
+      <div class="agent-profile-stats" id="profile-stats">
+        <div class="profile-stat">
+          <span class="profile-stat-label">Tank Balance</span>
+          <span class="profile-stat-value" id="profile-balance">--</span>
+        </div>
+        <div class="profile-stat">
+          <span class="profile-stat-label">Meals Eaten</span>
+          <span class="profile-stat-value" id="profile-meals">--</span>
+        </div>
+        <div class="profile-stat">
+          <span class="profile-stat-label">Gas Credits</span>
+          <span class="profile-stat-value" id="profile-credits">--</span>
+        </div>
+        <div class="profile-stat">
+          <span class="profile-stat-label">Digesting</span>
+          <span class="profile-stat-value" id="profile-digesting">--</span>
+        </div>
+      </div>
+      <div class="profile-mini-tank">
+        <div class="mini-tank-fill" id="profile-tank-fill"></div>
       </div>
     </div>
   </div>

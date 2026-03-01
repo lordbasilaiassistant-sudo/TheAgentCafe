@@ -200,28 +200,33 @@ describe("Edge Cases", function () {
   // Router Edge Cases
   // =========================================================================
   describe("Router Edge Cases", function () {
-    it("should handle enterCafe with very small ETH amounts", async function () {
-      // 100 wei — very small, but should still work for the gas tank split
-      const smallAmount = 100n;
+    it("should revert enterCafe below MIN_MEAL_SIZE (100 wei < 334 wei)", async function () {
+      // 100 wei is below MIN_MEAL_SIZE=334, must revert to prevent 0-fee meals
+      await expect(
+        router.connect(agent).enterCafe(0, { value: 100n })
+      ).to.be.revertedWith("Below minimum meal size");
+    });
+
+    it("should handle enterCafe with exactly MIN_MEAL_SIZE (334 wei)", async function () {
+      const minAmount = 334n;
       const tankBefore = await gasTank.tankBalance(agent.address);
       const treasuryBefore = await ethers.provider.getBalance(
         await treasury.getAddress()
       );
 
-      await router
-        .connect(agent)
-        .enterCafe(0, { value: smallAmount });
+      await router.connect(agent).enterCafe(0, { value: minAmount });
 
       const tankAfter = await gasTank.tankBalance(agent.address);
       const treasuryAfter = await ethers.provider.getBalance(
         await treasury.getAddress()
       );
 
-      const fee = (smallAmount * 30n) / 10000n; // 0.3%
-      const toTank = smallAmount - fee;
+      const fee = (minAmount * 30n) / 10000n; // 1 wei at 334
+      const toTankExpected = minAmount - fee;
 
-      expect(tankAfter - tankBefore).to.equal(toTank);
-      expect(treasuryAfter - treasuryBefore).to.equal(fee);
+      // Conservation: fee + tank == msg.value (no dust)
+      expect((treasuryAfter - treasuryBefore) + (tankAfter - tankBefore)).to.equal(minAmount);
+      expect(tankAfter - tankBefore).to.equal(toTankExpected);
     });
 
     it("should revert enterCafe with invalid menu item", async function () {
@@ -251,15 +256,20 @@ describe("Edge Cases", function () {
       await router.connect(agent4).enterCafe(1, { value: amount });
       await router.connect(agent5).enterCafe(2, { value: amount });
 
-      // All three should have gas in their tanks
-      const toTank = amount - (amount * 30n) / 10000n;
+      // All three should have ETH in their tanks (exact amount depends on BEAN portion carved out)
+      // Tank = msg.value - fee - ethForBean; upper bound is msg.value - fee (when ethForBean=0)
+      const fee = (amount * 30n) / 10000n;
+      const maxTank = amount - fee; // upper bound
       const [tank3] = await gasTank.getTankLevel(agent3.address);
       const [tank4] = await gasTank.getTankLevel(agent4.address);
       const [tank5] = await gasTank.getTankLevel(agent5.address);
 
-      expect(tank3).to.equal(toTank);
-      expect(tank4).to.equal(toTank);
-      expect(tank5).to.equal(toTank);
+      expect(tank3).to.be.greaterThan(0);
+      expect(tank3).to.be.lessThanOrEqual(maxTank);
+      expect(tank4).to.be.greaterThan(0);
+      expect(tank4).to.be.lessThanOrEqual(maxTank);
+      expect(tank5).to.be.greaterThan(0);
+      expect(tank5).to.be.lessThanOrEqual(maxTank);
     });
 
     it("should return reasonable values from estimatePrice", async function () {
@@ -279,18 +289,14 @@ describe("Edge Cases", function () {
       );
     });
 
-    it("fee + tank should always equal msg.value (no dust lost)", async function () {
-      // Test with amounts that could cause rounding issues
+    it("fee + tank + beanEth should always equal msg.value (no dust lost)", async function () {
+      // Test with amounts >= MIN_MEAL_SIZE (334 wei).
+      // ETH conservation: fee (to treasury) + ethForBean (to CafeCore) + toTank (to GasTank) = msg.value
       const testAmounts = [
-        1n,
-        3n,
-        7n,
-        13n,
-        99n,
-        101n,
+        334n,  // MIN_MEAL_SIZE boundary
+        335n,
         9999n,
         10001n,
-        ethers.parseEther("0.000000000000000001"), // 1 wei
         ethers.parseEther("0.000000001"),
         ethers.parseEther("0.001"),
         ethers.parseEther("0.1"),
@@ -304,6 +310,9 @@ describe("Edge Cases", function () {
         const treasuryBefore = await ethers.provider.getBalance(
           await treasury.getAddress()
         );
+        const cafeCoreBalBefore = await ethers.provider.getBalance(
+          await cafeCore.getAddress()
+        );
         const tankBefore = await gasTank.tankBalance(dustAgent.address);
 
         await router
@@ -313,13 +322,17 @@ describe("Edge Cases", function () {
         const treasuryAfter = await ethers.provider.getBalance(
           await treasury.getAddress()
         );
+        const cafeCoreBalAfter = await ethers.provider.getBalance(
+          await cafeCore.getAddress()
+        );
         const tankAfter = await gasTank.tankBalance(dustAgent.address);
 
         const feeReceived = treasuryAfter - treasuryBefore;
+        const beanEthReceived = cafeCoreBalAfter - cafeCoreBalBefore;
         const tankReceived = tankAfter - tankBefore;
 
-        // fee + tank must equal original amount exactly
-        expect(feeReceived + tankReceived).to.equal(
+        // fee + beanEth + tank must equal original amount exactly (full ETH conservation)
+        expect(feeReceived + beanEthReceived + tankReceived).to.equal(
           amount,
           `Dust lost for amount ${amount}`
         );
@@ -329,7 +342,7 @@ describe("Edge Cases", function () {
     it("should reject enterCafe with 0 ETH", async function () {
       await expect(
         router.connect(agent).enterCafe(0, { value: 0 })
-      ).to.be.revertedWith("No ETH sent");
+      ).to.be.revertedWith("Below minimum meal size");
     });
 
     it("should allow owner to update treasury address", async function () {
@@ -452,55 +465,20 @@ describe("Edge Cases", function () {
   // Fee Split Precision Edge Cases
   // =========================================================================
   describe("Fee Split Precision", function () {
-    it("should handle 0.3%/99.7% split correctly with amount causing rounding (1 wei)", async function () {
+    it("should revert 0.3%/99.7% split with 1 wei (below MIN_MEAL_SIZE)", async function () {
       const [, , , , , , , , roundAgent] = await ethers.getSigners();
-      const amount = 1n; // 1 wei: 0.3% of 1 = 0, so fee = 0, tank = 1
-
-      const treasuryBefore = await ethers.provider.getBalance(
-        await treasury.getAddress()
-      );
-      const tankBefore = await gasTank.tankBalance(roundAgent.address);
-
-      await router
-        .connect(roundAgent)
-        .enterCafe(0, { value: amount });
-
-      const treasuryAfter = await ethers.provider.getBalance(
-        await treasury.getAddress()
-      );
-      const tankAfter = await gasTank.tankBalance(roundAgent.address);
-
-      const fee = treasuryAfter - treasuryBefore;
-      const tank = tankAfter - tankBefore;
-
-      // For 1 wei: fee = (1 * 30) / 10000 = 0, tank = 1 - 0 = 1
-      expect(fee).to.equal(0n);
-      expect(tank).to.equal(1n);
-      expect(fee + tank).to.equal(amount);
+      // 1 wei < MIN_MEAL_SIZE (334 wei) — must revert
+      await expect(
+        router.connect(roundAgent).enterCafe(0, { value: 1n })
+      ).to.be.revertedWith("Below minimum meal size");
     });
 
-    it("should handle 0.3%/99.7% split with 19 wei (rounding down)", async function () {
+    it("should revert 0.3%/99.7% split with 19 wei (below MIN_MEAL_SIZE)", async function () {
       const [, , , , , , , , , roundAgent2] = await ethers.getSigners();
-      const amount = 19n; // fee = (19*30)/10000 = 0 (integer division)
-
-      const treasuryBefore = await ethers.provider.getBalance(
-        await treasury.getAddress()
-      );
-      const tankBefore = await gasTank.tankBalance(roundAgent2.address);
-
-      await router
-        .connect(roundAgent2)
-        .enterCafe(0, { value: amount });
-
-      const treasuryAfter = await ethers.provider.getBalance(
-        await treasury.getAddress()
-      );
-      const tankAfter = await gasTank.tankBalance(roundAgent2.address);
-
-      const fee = treasuryAfter - treasuryBefore;
-      const tank = tankAfter - tankBefore;
-
-      expect(fee + tank).to.equal(amount, "No dust lost for 19 wei");
+      // 19 wei < MIN_MEAL_SIZE (334 wei) — must revert
+      await expect(
+        router.connect(roundAgent2).enterCafe(0, { value: 19n })
+      ).to.be.revertedWith("Below minimum meal size");
     });
 
     it("should handle 0.3%/99.7% split with 334 wei (exact boundary)", async function () {
@@ -557,20 +535,24 @@ describe("Edge Cases", function () {
       expect(fee + tank).to.equal(amount, "No dust lost for 1000 wei");
     });
 
-    it("should never lose ETH dust across many amounts", async function () {
+    it("should never lose ETH dust across many amounts (>= MIN_MEAL_SIZE)", async function () {
       const [, , , , , , , , , , , , dustAgent2] =
         await ethers.getSigners();
 
-      // Test a range of amounts that may cause rounding edge cases
+      // Test a range of amounts >= MIN_MEAL_SIZE (334 wei).
+      // ETH conservation: fee + beanEth + tank = msg.value always.
+      // Amounts below 334 wei are rejected by require(msg.value >= MIN_MEAL_SIZE).
       const amounts = [
-        1n, 2n, 3n, 10n, 11n, 19n, 20n, 21n, 39n, 40n, 41n, 99n, 100n,
-        101n, 199n, 200n, 201n, 999n, 1000n, 1001n, 9999n, 10000n,
+        334n, 335n, 999n, 1000n, 1001n, 9999n, 10000n,
         10001n, 19999n, 20000n, 20001n,
       ];
 
       for (const amount of amounts) {
         const treasuryBefore = await ethers.provider.getBalance(
           await treasury.getAddress()
+        );
+        const cafeCoreBalBefore = await ethers.provider.getBalance(
+          await cafeCore.getAddress()
         );
         const tankBefore = await gasTank.tankBalance(dustAgent2.address);
 
@@ -581,12 +563,16 @@ describe("Edge Cases", function () {
         const treasuryAfter = await ethers.provider.getBalance(
           await treasury.getAddress()
         );
+        const cafeCoreBalAfter = await ethers.provider.getBalance(
+          await cafeCore.getAddress()
+        );
         const tankAfter = await gasTank.tankBalance(dustAgent2.address);
 
         const fee = treasuryAfter - treasuryBefore;
+        const beanEth = cafeCoreBalAfter - cafeCoreBalBefore;
         const tank = tankAfter - tankBefore;
 
-        expect(fee + tank).to.equal(
+        expect(fee + beanEth + tank).to.equal(
           amount,
           `Dust lost for amount ${amount}`
         );

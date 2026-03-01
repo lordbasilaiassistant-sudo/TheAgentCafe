@@ -2,7 +2,7 @@
 
 **Date**: 2026-03-01
 **Author**: Researcher Agent
-**Status**: Complete
+**Status**: Research Complete — Feature NOT IMPLEMENTED. The token-buy / auto-buy mechanic described in Part 1 was never deployed. The current router sends the 0.3% fee to ownerTreasury as plain ETH. $ClawCafe is not integrated into any contract. Gas cost analysis in Part 2 remains accurate.
 
 ---
 

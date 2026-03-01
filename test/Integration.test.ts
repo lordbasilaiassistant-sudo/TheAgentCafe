@@ -237,27 +237,42 @@ describe("The Agent Cafe — Full Integration Test", function () {
   });
 
   describe("Step 5: Router — ONE transaction enterCafe flow", function () {
-    it("should split 0.3%/99.7% and fill gas tank", async function () {
+    it("should send 0.3% fee to treasury and deposit remainder to gas tank (minus BEAN portion)", async function () {
       const ethToSend = ethers.parseEther("0.01");
       const treasuryBefore = await ethers.provider.getBalance(
         await treasury.getAddress()
       );
+      const cafeCoreBalBefore = await ethers.provider.getBalance(
+        await cafeCore.getAddress()
+      );
+      const tankBefore = await gasTank.tankBalance(agent2.address);
 
       const tx = await router
         .connect(agent2)
         .enterCafe(0, { value: ethToSend });
       await tx.wait();
 
-      // 0.3% fee = 0.00003 ETH to treasury
       const treasuryAfter = await ethers.provider.getBalance(
         await treasury.getAddress()
       );
+      const cafeCoreBalAfter = await ethers.provider.getBalance(
+        await cafeCore.getAddress()
+      );
+      const tankBal = await gasTank.tankBalance(agent2.address);
       const feeReceived = treasuryAfter - treasuryBefore;
-      expect(feeReceived).to.equal(ethers.parseEther("0.00003"));
+      const beanEthReceived = cafeCoreBalAfter - cafeCoreBalBefore;
+      const tankReceived = tankBal - tankBefore;
 
-      // 99.7% = 0.00997 ETH to gas tank
-      const [tankBal] = await gasTank.getTankLevel(agent2.address);
-      expect(tankBal).to.equal(ethers.parseEther("0.00997"));
+      // Treasury receives the router 0.3% fee + CafeCore 1% mint fee (same address).
+      // So treasury delta >= router fee (0.3%).
+      const routerFee = (ethToSend * 30n) / 10000n;
+      expect(feeReceived).to.be.greaterThanOrEqual(routerFee);
+
+      // Full ETH conservation: treasury gain + cafeCore reserve + tank = msg.value
+      expect(feeReceived + beanEthReceived + tankReceived).to.equal(ethToSend);
+
+      // Tank receives the remainder after fees and BEAN minting
+      expect(tankBal).to.be.greaterThan(tankBefore);
     });
 
     it("should emit AgentFed event", async function () {
@@ -278,7 +293,7 @@ describe("The Agent Cafe — Full Integration Test", function () {
     it("should reject enterCafe with 0 ETH", async function () {
       await expect(
         router.connect(agent2).enterCafe(0, { value: 0 })
-      ).to.be.revertedWith("No ETH sent");
+      ).to.be.revertedWith("Below minimum meal size");
     });
 
     it("should reject invalid menu item", async function () {
@@ -291,7 +306,7 @@ describe("The Agent Cafe — Full Integration Test", function () {
   });
 
   describe("Step 6: Fee split verification", function () {
-    it("should correctly split fees for various amounts", async function () {
+    it("should collect 0.3% fee to treasury and preserve full ETH conservation", async function () {
       // Reset: use a fresh agent
       const [, , , freshAgent] = await ethers.getSigners();
 
@@ -305,6 +320,9 @@ describe("The Agent Cafe — Full Integration Test", function () {
         const treasuryBefore = await ethers.provider.getBalance(
           await treasury.getAddress()
         );
+        const cafeCoreBalBefore = await ethers.provider.getBalance(
+          await cafeCore.getAddress()
+        );
         const tankBefore = await gasTank.tankBalance(freshAgent.address);
 
         await router
@@ -314,15 +332,21 @@ describe("The Agent Cafe — Full Integration Test", function () {
         const treasuryAfter = await ethers.provider.getBalance(
           await treasury.getAddress()
         );
+        const cafeCoreBalAfter = await ethers.provider.getBalance(
+          await cafeCore.getAddress()
+        );
         const tankAfter = await gasTank.tankBalance(freshAgent.address);
 
         const feeReceived = treasuryAfter - treasuryBefore;
+        const beanEthReceived = cafeCoreBalAfter - cafeCoreBalBefore;
         const tankReceived = tankAfter - tankBefore;
 
-        // 0.3% fee
-        expect(feeReceived).to.equal((amount * 30n) / 10000n);
-        // 99.7% to tank
-        expect(tankReceived).to.equal(amount - feeReceived);
+        // Treasury receives at least the router 0.3% fee. CafeCore 1% mint fee
+        // also flows to the same treasury address when BEAN is minted.
+        const routerFee = (amount * 30n) / 10000n;
+        expect(feeReceived).to.be.greaterThanOrEqual(routerFee);
+        // Full ETH conservation: treasury gain + cafeCore reserve + tank = msg.value
+        expect(feeReceived + beanEthReceived + tankReceived).to.equal(amount);
       }
     });
   });
@@ -418,24 +442,26 @@ describe("The Agent Cafe — Full Integration Test", function () {
         .connect(lifecycleAgent)
         .enterCafe(0, { value: ethers.parseEther("0.01") });
 
-      // 2. Check tank is filled (99.7%)
+      // 2. Check tank is filled (msg.value - fee - ethForBean)
       let [tankBal, isHungry] = await gasTank.getTankLevel(
         lifecycleAgent.address
       );
-      expect(tankBal).to.equal(ethers.parseEther("0.00997"));
+      expect(tankBal).to.be.greaterThan(0);
+      expect(tankBal).to.be.lessThanOrEqual(ethers.parseEther("0.00997"));
       expect(isHungry).to.equal(false);
 
-      // 3. Simulate gas usage — deduct most of tank
+      // 3. Simulate gas usage — deduct until below hungry threshold (0.001 ETH)
+      const toDeduct = tankBal - ethers.parseEther("0.0005");
       await gasTank.deductForGas(
         lifecycleAgent.address,
-        ethers.parseEther("0.009")
+        toDeduct
       );
 
       // 4. Check agent is hungry
       [tankBal, isHungry] = await gasTank.getTankLevel(
         lifecycleAgent.address
       );
-      expect(tankBal).to.equal(ethers.parseEther("0.00097"));
+      expect(tankBal).to.equal(ethers.parseEther("0.0005"));
       expect(isHungry).to.equal(true);
 
       // 5. Agent eats again

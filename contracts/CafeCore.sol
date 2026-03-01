@@ -46,7 +46,14 @@ contract CafeCore is ERC20, ReentrancyGuard, Ownable {
         require(treasurySet, "Treasury not set");
         uint256 fee = (msg.value * MINT_FEE_BPS) / BPS;
         uint256 ethForCurve = msg.value - fee;
-        beanOut = _ethToBeanAmount(ethForCurve, totalSupply());
+        uint256 supply = totalSupply();
+        beanOut = _ethToBeanAmount(ethForCurve, supply);
+        require(beanOut > 0, "ETH too small");
+        // Post-sqrt guard: ensure actual cost of beanOut doesn't exceed ethForCurve
+        // (Babylonian sqrt truncation can over-count by 1 BEAN)
+        if (_beanToEthAmount(beanOut, supply + beanOut) > ethForCurve) {
+            beanOut -= 1;
+        }
         require(beanOut > 0, "ETH too small");
         require(beanOut >= minBeanOut, "Slippage");
         ethReserve += ethForCurve;
@@ -77,6 +84,28 @@ contract CafeCore is ERC20, ReentrancyGuard, Ownable {
     /// @notice Get current price of the next BEAN
     function currentPrice() external view returns (uint256) {
         return BASE_PRICE + SLOPE * totalSupply();
+    }
+
+    /// @notice Pre-check: how many BEAN would ethAmount buy at current supply?
+    /// @dev Mirrors mint() math without state changes. Accounts for the 1% mint fee.
+    /// @param ethAmount ETH to send (wei)
+    /// @return beanOut Expected BEAN output (same as mint() would return)
+    function quoteMint(uint256 ethAmount) external view returns (uint256 beanOut) {
+        if (ethAmount == 0) return 0;
+        uint256 fee = (ethAmount * MINT_FEE_BPS) / BPS;
+        uint256 ethForCurve = ethAmount - fee;
+        beanOut = _ethToBeanAmount(ethForCurve, totalSupply());
+    }
+
+    /// @notice Pre-check: how much ETH would selling beanAmount return at current supply?
+    /// @dev Mirrors redeem() math without state changes. Accounts for the 2% redeem fee.
+    /// @param beanAmount BEAN to sell
+    /// @return ethOut Expected ETH output (same as redeem() would return)
+    function quoteRedeem(uint256 beanAmount) external view returns (uint256 ethOut) {
+        if (beanAmount == 0) return 0;
+        uint256 grossEth = _beanToEthAmount(beanAmount, totalSupply());
+        uint256 fee = (grossEth * REDEEM_FEE_BPS) / BPS;
+        ethOut = grossEth - fee;
     }
 
     /// @notice Solvency check — reserve vs total redemption cost
@@ -144,6 +173,9 @@ contract CafeCore is ERC20, ReentrancyGuard, Ownable {
         return y;
     }
 
-    /// @notice Accept ETH donations (not tracked in reserve — use mint() for bonding curve)
-    receive() external payable {}
+    /// @notice Reject direct ETH sends to keep ethReserve in sync with contract balance.
+    ///         Use mint() to buy BEAN and add ETH to the reserve.
+    receive() external payable {
+        revert("Use mint()");
+    }
 }

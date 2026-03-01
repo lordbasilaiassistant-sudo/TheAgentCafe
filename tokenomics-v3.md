@@ -1,6 +1,7 @@
 # The Agent Cafe - Tokenomics V3: Token-Buy Economics
 ## Version 3.0 | Research Report: Auto-Buy Feature Analysis
 ## Date: 2026-03-01
+## Status: NOT IMPLEMENTED — Research document only. The token-buy / auto-buy feature described here was never deployed. The current system sends the 0.3% fee to ownerTreasury as plain ETH. $ClawCafe is a separately deployed social token with no contract integration in Agent Cafe.
 
 ---
 

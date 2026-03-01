@@ -324,17 +324,16 @@ describe("Security Fixes & Critical Paths", function () {
   });
 
   // =========================================================================
-  // CafeCore receive() no longer inflates ethReserve
+  // CafeCore receive() reverts to prevent ethReserve desync
   // =========================================================================
-  describe("CafeCore receive() does not inflate reserve", function () {
-    it("should accept ETH via receive() without changing ethReserve", async function () {
-      const reserveBefore = await cafeCore.ethReserve();
-      await deployer.sendTransaction({
-        to: await cafeCore.getAddress(),
-        value: ethers.parseEther("0.001"),
-      });
-      const reserveAfter = await cafeCore.ethReserve();
-      expect(reserveAfter).to.equal(reserveBefore);
+  describe("CafeCore receive() reverts to prevent reserve desync", function () {
+    it("should revert direct ETH sends to keep ethReserve in sync", async function () {
+      await expect(
+        deployer.sendTransaction({
+          to: await cafeCore.getAddress(),
+          value: ethers.parseEther("0.001"),
+        })
+      ).to.be.revertedWith("Use mint()");
     });
   });
 
@@ -342,43 +341,39 @@ describe("Security Fixes & Critical Paths", function () {
   // Router food token minting — the BEAN path
   // =========================================================================
   describe("Router enterCafe food token minting", function () {
-    it("should mint food token to agent when enough ETH is sent", async function () {
-      // Send enough ETH that the router can afford BEAN for espresso (50 BEAN)
-      // At genesis supply, 50 BEAN costs ~50 * 1e12 = 5e13 wei = 0.00005 ETH
-      // Plus mint fee. Send 0.01 ETH which is way more than enough.
+    it("should mint food token and credit gas calories when enough ETH is sent", async function () {
+      // CRITICAL FIX VERIFIED: enterCafe() now reserves ETH for BEAN minting BEFORE
+      // depositing to the gas tank. Food tokens will actually be minted.
+      // At genesis supply, espresso (50 BEAN) costs ~50,624 wei. Send 0.01 ETH (plenty).
       const ethToSend = ethers.parseEther("0.01");
 
-      // Check espresso balance before
-      const espressoBefore = await menuRegistry.balanceOf(agent2.address, 0);
+      // Record state before
+      const statusBefore = await menuRegistry.getAgentStatus(agent2.address);
 
       await router.connect(agent2).enterCafe(0, { value: ethToSend });
 
-      // The router tries to mint BEAN and buy food — but since 99.7% goes to tank
-      // and only the router's leftover balance is used for BEAN, the food token
-      // may or may not get minted depending on router's ETH balance.
-      // This is by design — food is a bonus, gas tank fill is guaranteed.
-      const espressoAfter = await menuRegistry.balanceOf(agent2.address, 0);
-
-      // Food tokens should be 0 since they're consumed in the same tx
-      // (buyItemFor + consumeFor). The metabolic state should show the meal.
+      // Food tokens are bought AND immediately consumed in the same tx (buyItemFor + consumeFor).
+      // So no ERC-1155 balance remains — but metabolic state shows the meal was processed.
       const status = await menuRegistry.getAgentStatus(agent2.address);
-      // If food was minted+consumed, mealCount > 0
-      // The gas tank should definitely be filled regardless
+      expect(status.mealCount).to.be.greaterThan(statusBefore.mealCount);
+      // Espresso is instant — availableGas should have increased
+      expect(status.availableGas).to.be.greaterThan(statusBefore.availableGas);
+
+      // Gas tank should be filled with the remainder
       const [tankBal] = await gasTank.getTankLevel(agent2.address);
       expect(tankBal).to.be.greaterThan(0);
     });
 
-    it("should still fill gas tank even if BEAN minting fails (no router balance)", async function () {
-      // The router has no extra ETH, so BEAN minting can't happen
-      // But the gas tank should still fill with 99.7%
+    it("should still fill gas tank even when ETH amount is at MIN_MEAL_SIZE boundary", async function () {
+      // At MIN_MEAL_SIZE (334 wei), ethForBean > afterFee so food is skipped, all goes to tank
       const [, , , , , freshAgent] = await ethers.getSigners();
-      const ethToSend = ethers.parseEther("0.005");
+      const ethToSend = 334n; // exactly MIN_MEAL_SIZE
 
       await router.connect(freshAgent).enterCafe(0, { value: ethToSend });
 
       const [tankBal] = await gasTank.getTankLevel(freshAgent.address);
-      const expectedTank =
-        ethToSend - (ethToSend * 30n) / 10000n;
+      const fee = (ethToSend * 30n) / 10000n; // = 1 wei
+      const expectedTank = ethToSend - fee;   // = 333 wei (ethForBean=0 since too small)
       expect(tankBal).to.equal(expectedTank);
     });
   });
@@ -503,18 +498,22 @@ describe("Security Fixes & Critical Paths", function () {
       let [bal, hungry, starving] = await gasTank.getTankLevel(
         cycleAgent.address
       );
-      expect(bal).to.equal(ethers.parseEther("0.00997"));
+      // Tank = msg.value - fee - ethForBean. Must be > 0 and below 0.00997 ETH.
+      expect(bal).to.be.greaterThan(0);
+      expect(bal).to.be.lessThanOrEqual(ethers.parseEther("0.00997"));
       expect(hungry).to.equal(false);
       expect(starving).to.equal(false);
 
-      // 2. Deduct gas until hungry
+      // 2. Deduct gas until hungry (deduct enough to go below 0.001 ETH threshold)
+      // Deduct bal - 0.0001 ETH to ensure we go into hungry zone
+      const toDeduct = bal - ethers.parseEther("0.0001");
       await gasTank.deductForGas(
         cycleAgent.address,
-        ethers.parseEther("0.009")
+        toDeduct
       );
 
       [bal, hungry, starving] = await gasTank.getTankLevel(cycleAgent.address);
-      expect(bal).to.equal(ethers.parseEther("0.00097"));
+      expect(bal).to.equal(ethers.parseEther("0.0001"));
       expect(hungry).to.equal(true);
       expect(starving).to.equal(false);
 
