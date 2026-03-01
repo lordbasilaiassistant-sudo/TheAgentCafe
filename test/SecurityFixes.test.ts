@@ -353,7 +353,7 @@ describe("Security Fixes & Critical Paths", function () {
 
       await router.connect(agent2).enterCafe(0, { value: ethToSend });
 
-      // The router tries to mint BEAN and buy food — but since 95% goes to tank
+      // The router tries to mint BEAN and buy food — but since 99.7% goes to tank
       // and only the router's leftover balance is used for BEAN, the food token
       // may or may not get minted depending on router's ETH balance.
       // This is by design — food is a bonus, gas tank fill is guaranteed.
@@ -370,7 +370,7 @@ describe("Security Fixes & Critical Paths", function () {
 
     it("should still fill gas tank even if BEAN minting fails (no router balance)", async function () {
       // The router has no extra ETH, so BEAN minting can't happen
-      // But the gas tank should still fill with 95%
+      // But the gas tank should still fill with 99.7%
       const [, , , , , freshAgent] = await ethers.getSigners();
       const ethToSend = ethers.parseEther("0.005");
 
@@ -378,7 +378,7 @@ describe("Security Fixes & Critical Paths", function () {
 
       const [tankBal] = await gasTank.getTankLevel(freshAgent.address);
       const expectedTank =
-        ethToSend - (ethToSend * 500n) / 10000n;
+        ethToSend - (ethToSend * 30n) / 10000n;
       expect(tankBal).to.equal(expectedTank);
     });
   });
@@ -503,7 +503,7 @@ describe("Security Fixes & Critical Paths", function () {
       let [bal, hungry, starving] = await gasTank.getTankLevel(
         cycleAgent.address
       );
-      expect(bal).to.equal(ethers.parseEther("0.0095"));
+      expect(bal).to.equal(ethers.parseEther("0.00997"));
       expect(hungry).to.equal(false);
       expect(starving).to.equal(false);
 
@@ -514,7 +514,7 @@ describe("Security Fixes & Critical Paths", function () {
       );
 
       [bal, hungry, starving] = await gasTank.getTankLevel(cycleAgent.address);
-      expect(bal).to.equal(ethers.parseEther("0.0005"));
+      expect(bal).to.equal(ethers.parseEther("0.00097"));
       expect(hungry).to.equal(true);
       expect(starving).to.equal(false);
 

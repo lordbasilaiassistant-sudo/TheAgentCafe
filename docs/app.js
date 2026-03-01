@@ -10,20 +10,23 @@ const CONFIG = {
 
   // v2 contract addresses — UPDATE after redeployment
   contracts: {
-    CafeCore: '0x6B4E47Ccf1Dd19648Fd0e3a56F725141AF888df4',
-    CafeTreasury: '0x5022AB6dA4E93298f727deBb888539B2c2c9ECa0',
-    MenuRegistry: '0xE464bCACe4B9BA0a0Ec19CC4ED3C1922362436Cc',
-    AgentCafePaymaster: '0x5ef5bc15ee8320fdAf56Df9dbF1524BDCb6111aa',
-    AgentCard: '0xC71784117bdc205c1dcBcE89eD75d686161EfB32',
-    // v2 contracts — set after deploy
-    GasTank: '',
-    Router: '',
+    CafeCore: '0x16D3794ae5c6f820120df9572b2e5Ed67CC041f9',
+    CafeTreasury: '0x6ceC16b88fC6b48DE81DA49Ed29d3f2FfF7f6685',
+    MenuRegistry: '0x31e8E956e8fe3B451e56c9450CE7F2e28B5430dF',
+    AgentCafePaymaster: '0xCaf5a4d48189f3389E3bB7c554597bE93238e473',
+    AgentCard: '0x5982BcDcd5daA6C9638837d6911954A2d890ba26',
+    GasTank: '0x939CcaB6822d60d3fB67D50Ae1acDF3cE967FB6b',
+    Router: '0x9649C364b4334C4af257393c717551AD3562eb4e',
   },
 
   // Suggested ETH amounts per item
   suggestedEth: ['0.005', '0.01', '0.02'],
   itemNames: ['Espresso Shot', 'Latte', 'Agent Sandwich'],
   itemIcons: ['coffee', 'latte', 'sandwich'],
+
+  // Gas estimation: avg Base L2 tx cost
+  avgGasCostEth: 0.000001,
+  avgTxPerDay: 50, // typical agent activity
 };
 
 // Minimal ABIs
@@ -82,30 +85,24 @@ let pollingInterval = null;
 // Init
 // ============================================================
 async function init() {
-  // Read-only provider for on-chain data
   provider = new ethers.JsonRpcProvider(CONFIG.rpcUrl);
-
-  // Init read-only contracts
   initContracts(provider);
 
-  // Load initial data
   await Promise.all([
     loadStats(),
     loadPrices(),
     pollBlockNumber(),
   ]);
 
-  // Start polling
   pollingInterval = setInterval(async () => {
     await Promise.all([loadStats(), pollBlockNumber()]);
     if (userAddress) await loadTankStatus(userAddress);
   }, 10000);
 
-  // Listen for events
   listenForEvents();
-
-  // Wire up UI
   wireUI();
+  initCalculator();
+  initTankBubbles();
 }
 
 function initContracts(signerOrProvider) {
@@ -122,23 +119,22 @@ function initContracts(signerOrProvider) {
 // ============================================================
 async function loadStats() {
   try {
-    // Try AgentCard first
     if (contracts.AgentCard) {
       const [totalMeals, uniqueAgents] = await contracts.AgentCard.getCafeStats();
-      el('stat-meals').textContent = Number(totalMeals).toLocaleString();
-      el('stat-agents').textContent = Number(uniqueAgents).toLocaleString();
+      animateNumber('stat-meals', Number(totalMeals));
+      animateNumber('stat-agents', Number(uniqueAgents));
     } else if (contracts.MenuRegistry) {
       const meals = await contracts.MenuRegistry.totalMealsServed();
       const agents = await contracts.MenuRegistry.totalAgentsServed();
-      el('stat-meals').textContent = Number(meals).toLocaleString();
-      el('stat-agents').textContent = Number(agents).toLocaleString();
+      animateNumber('stat-meals', Number(meals));
+      animateNumber('stat-agents', Number(agents));
     }
 
     if (contracts.CafeCore) {
       const price = await contracts.CafeCore.currentPrice();
       const supply = await contracts.CafeCore.totalSupply();
       el('stat-bean-price').textContent = formatEthShort(price);
-      el('stat-bean-supply').textContent = Number(supply).toLocaleString();
+      animateNumber('stat-bean-supply', Number(supply));
     }
   } catch (e) {
     console.error('Stats load error:', e);
@@ -154,7 +150,6 @@ async function loadPrices() {
       }
     }
   } catch (e) {
-    // Fallback: use suggested prices
     console.log('Router not available, using suggested prices');
   }
 }
@@ -169,7 +164,6 @@ async function loadTankStatus(address) {
       updateTankDisplay(bal, isHungry, isStarving);
     }
 
-    // Metabolic status
     if (contracts.MenuRegistry) {
       const [avail, digesting, totalConsumed, mealCount] = await contracts.MenuRegistry.getAgentStatus(address);
       el('tank-meals').textContent = Number(mealCount);
@@ -183,23 +177,27 @@ function updateTankDisplay(bal, isHungry, isStarving) {
   const ethBal = ethers.formatEther(bal);
   el('tank-balance').textContent = `${parseFloat(ethBal).toFixed(6)} ETH`;
 
-  // Tank fill visual (max at 0.05 ETH = 100%)
   const maxTank = 0.05;
   const fillPct = Math.min(100, (parseFloat(ethBal) / maxTank) * 100);
   el('tank-fill').style.height = `${fillPct}%`;
 
+  // Update tank fill color based on status
+  const tankFill = el('tank-fill');
   if (isStarving) {
     el('tank-status').textContent = 'STARVING';
     el('tank-status').className = 'tank-stat-value status-starving';
     el('tank-level').textContent = 'EMPTY';
+    tankFill.style.background = 'linear-gradient(to top, var(--red), rgba(248, 113, 113, 0.4))';
   } else if (isHungry) {
     el('tank-status').textContent = 'HUNGRY';
     el('tank-status').className = 'tank-stat-value status-hungry';
     el('tank-level').textContent = `${parseFloat(ethBal).toFixed(4)}`;
+    tankFill.style.background = 'linear-gradient(to top, var(--yellow), rgba(251, 191, 36, 0.4))';
   } else {
     el('tank-status').textContent = 'FED';
     el('tank-status').className = 'tank-stat-value status-fed';
     el('tank-level').textContent = `${parseFloat(ethBal).toFixed(4)}`;
+    tankFill.style.background = 'linear-gradient(to top, var(--accent), rgba(200, 149, 106, 0.4))';
   }
 }
 
@@ -214,7 +212,6 @@ async function pollBlockNumber() {
 // Event Listening
 // ============================================================
 function listenForEvents() {
-  // Poll for recent events since WebSocket isn't available on public RPC
   loadRecentEvents();
   setInterval(loadRecentEvents, 15000);
 }
@@ -226,7 +223,6 @@ async function loadRecentEvents() {
 
     const events = [];
 
-    // MenuRegistry events
     if (contracts.MenuRegistry) {
       try {
         const purchased = await contracts.MenuRegistry.queryFilter(
@@ -251,7 +247,6 @@ async function loadRecentEvents() {
       } catch (e) {}
     }
 
-    // GasTank events
     if (contracts.GasTank) {
       try {
         const deposits = await contracts.GasTank.queryFilter(
@@ -296,7 +291,6 @@ async function loadRecentEvents() {
       } catch (e) {}
     }
 
-    // Router events
     if (contracts.Router) {
       try {
         const fed = await contracts.Router.queryFilter(
@@ -311,25 +305,75 @@ async function loadRecentEvents() {
       } catch (e) {}
     }
 
-    // Sort by block desc
     events.sort((a, b) => b.block - a.block);
 
-    // Render
     const feed = el('activity-feed');
     if (events.length === 0) {
-      feed.innerHTML = '<div class="feed-empty">No recent activity. Be the first to eat!</div>';
+      feed.innerHTML = `
+        <div class="feed-empty">
+          <div class="feed-empty-icon">📡</div>
+          <div>No recent activity. Be the first to eat!</div>
+          <div class="feed-empty-sub">Events from the last 100 blocks will appear here</div>
+        </div>`;
     } else {
       feed.innerHTML = events.slice(0, 50).map(e => `
         <div class="feed-event">
           <span class="event-type ${e.type}">${e.type}</span>
-          <span class="event-detail">${e.text}</span>
-          <span class="event-addr">block ${e.block}</span>
+          <span class="event-detail">${escapeHtml(e.text)}</span>
+          <span class="event-block">#${e.block}</span>
         </div>
       `).join('');
     }
   } catch (e) {
     console.error('Event load error:', e);
   }
+}
+
+// ============================================================
+// Gas Cost Calculator
+// ============================================================
+function initCalculator() {
+  const input = el('calc-eth');
+  input.addEventListener('input', updateCalculator);
+  // Set default
+  input.value = '0.01';
+  updateCalculator();
+}
+
+function updateCalculator() {
+  const eth = parseFloat(el('calc-eth').value) || 0;
+  const fee = eth * 0.003;
+  const tank = eth - fee;
+  const txns = Math.floor(tank / CONFIG.avgGasCostEth);
+  const days = CONFIG.avgTxPerDay > 0 ? (txns / CONFIG.avgTxPerDay).toFixed(1) : '--';
+
+  el('calc-tank').textContent = tank > 0 ? `${tank.toFixed(6)} ETH` : '--';
+  el('calc-fee').textContent = fee > 0 ? `${fee.toFixed(6)} ETH` : '--';
+  el('calc-txns').textContent = txns > 0 ? `~${txns.toLocaleString()}` : '--';
+  el('calc-days').textContent = txns > 0 ? `~${days}` : '--';
+}
+
+// ============================================================
+// Tank Bubbles Animation
+// ============================================================
+function initTankBubbles() {
+  const container = el('tank-bubbles');
+  if (!container) return;
+
+  function spawnBubble() {
+    const bubble = document.createElement('div');
+    bubble.className = 'tank-bubble';
+    bubble.style.left = `${10 + Math.random() * 60}px`;
+    bubble.style.bottom = '0px';
+    bubble.style.animationDuration = `${2 + Math.random() * 2}s`;
+    bubble.style.animationDelay = `${Math.random() * 0.5}s`;
+    bubble.style.width = `${3 + Math.random() * 3}px`;
+    bubble.style.height = bubble.style.width;
+    container.appendChild(bubble);
+    setTimeout(() => bubble.remove(), 4000);
+  }
+
+  setInterval(spawnBubble, 800);
 }
 
 // ============================================================
@@ -345,7 +389,6 @@ async function connectWallet() {
     const browserProvider = new ethers.BrowserProvider(window.ethereum);
     await browserProvider.send('eth_requestAccounts', []);
 
-    // Check chain
     const network = await browserProvider.getNetwork();
     if (Number(network.chainId) !== CONFIG.chainId) {
       try {
@@ -375,17 +418,14 @@ async function connectWallet() {
     signer = await browserProvider.getSigner();
     userAddress = await signer.getAddress();
 
-    // Re-init contracts with signer for write ops
     initContracts(signer);
 
     el('connect-btn').textContent = shortAddr(userAddress);
     el('connect-btn').classList.add('connected');
     el('withdraw-btn').disabled = false;
 
-    // Enable order buttons
     document.querySelectorAll('.btn-order').forEach(b => b.disabled = false);
 
-    // Load tank
     await loadTankStatus(userAddress);
 
     showToast(`Connected: ${shortAddr(userAddress)}`, 'success');
@@ -415,10 +455,10 @@ function openOrderModal(itemId) {
 
 function updateModalSplit() {
   const eth = parseFloat(el('order-eth').value) || 0;
-  const fee = eth * 0.05;
+  const fee = eth * 0.003;
   const tank = eth - fee;
-  el('modal-fee').textContent = fee.toFixed(6);
-  el('modal-tank').textContent = tank.toFixed(6);
+  el('modal-fee').textContent = `${fee.toFixed(6)} ETH`;
+  el('modal-tank').textContent = `${tank.toFixed(6)} ETH`;
 }
 
 async function confirmOrder() {
@@ -435,7 +475,6 @@ async function confirmOrder() {
 
   try {
     if (contracts.Router && CONFIG.contracts.Router) {
-      // v2 flow: use Router
       const tx = await contracts.Router.enterCafe(currentOrderItem, {
         value: ethers.parseEther(ethAmount),
       });
@@ -443,7 +482,6 @@ async function confirmOrder() {
       await tx.wait();
       showToast(`Ordered ${CONFIG.itemNames[currentOrderItem]}! Tank filled.`, 'success');
     } else {
-      // Fallback: direct BEAN mint (v1 flow)
       const tx = await contracts.CafeCore.mint(0, {
         value: ethers.parseEther(ethAmount),
       });
@@ -452,7 +490,6 @@ async function confirmOrder() {
       showToast('BEAN minted! Approve & buy food manually.', 'success');
     }
 
-    // Refresh
     await loadTankStatus(userAddress);
     await loadStats();
     closeOrderModal();
@@ -511,27 +548,47 @@ async function handleWithdraw() {
 async function lookupAgent() {
   const addr = el('lookup-address').value.trim();
   if (!ethers.isAddress(addr)) {
-    el('lookup-result').textContent = 'Invalid address';
+    el('lookup-result').innerHTML = '<span style="color:var(--red)">Invalid address</span>';
     return;
   }
 
+  el('lookup-result').innerHTML = '<span style="color:var(--text-muted)">Loading...</span>';
+  el('lookup-result').classList.add('has-data');
+
   try {
-    let result = '';
+    let html = '';
 
     if (contracts.GasTank) {
       const [bal, isHungry, isStarving] = await contracts.GasTank.getTankLevel(addr);
       const status = isStarving ? 'STARVING' : isHungry ? 'HUNGRY' : 'FED';
-      result += `Tank: ${parseFloat(ethers.formatEther(bal)).toFixed(6)} ETH (${status})`;
+      const statusClass = isStarving ? 'status-starving' : isHungry ? 'status-hungry' : 'status-fed';
+      html += `
+        <div class="lookup-stat">
+          <span class="lookup-stat-label">Tank</span>
+          <span class="lookup-stat-value">${parseFloat(ethers.formatEther(bal)).toFixed(6)} ETH</span>
+        </div>
+        <div class="lookup-stat">
+          <span class="lookup-stat-label">Status</span>
+          <span class="lookup-stat-value ${statusClass}">${status}</span>
+        </div>`;
     }
 
     if (contracts.MenuRegistry) {
       const [avail, digesting, total, meals] = await contracts.MenuRegistry.getAgentStatus(addr);
-      result += ` | Meals: ${Number(meals)} | Gas credits: ${Number(avail).toLocaleString()}`;
+      html += `
+        <div class="lookup-stat">
+          <span class="lookup-stat-label">Meals</span>
+          <span class="lookup-stat-value">${Number(meals)}</span>
+        </div>
+        <div class="lookup-stat">
+          <span class="lookup-stat-label">Gas Credits</span>
+          <span class="lookup-stat-value">${Number(avail).toLocaleString()}</span>
+        </div>`;
     }
 
-    el('lookup-result').textContent = result || 'No data found';
+    el('lookup-result').innerHTML = html || '<span style="color:var(--text-muted)">No data found</span>';
   } catch (e) {
-    el('lookup-result').textContent = 'Error: ' + (e.message || 'unknown');
+    el('lookup-result').innerHTML = `<span style="color:var(--red)">Error: ${escapeHtml(e.message || 'unknown')}</span>`;
   }
 }
 
@@ -539,15 +596,12 @@ async function lookupAgent() {
 // UI Wiring
 // ============================================================
 function wireUI() {
-  // Connect button
   el('connect-btn').addEventListener('click', connectWallet);
 
-  // Order buttons
   document.querySelectorAll('.btn-order').forEach(btn => {
     btn.addEventListener('click', () => openOrderModal(parseInt(btn.dataset.item)));
   });
 
-  // Modal
   el('modal-cancel').addEventListener('click', closeOrderModal);
   el('modal-confirm').addEventListener('click', confirmOrder);
   el('order-eth').addEventListener('input', updateModalSplit);
@@ -555,32 +609,28 @@ function wireUI() {
     if (e.target === el('order-modal')) closeOrderModal();
   });
 
-  // Withdraw
   el('withdraw-btn').addEventListener('click', handleWithdraw);
 
-  // Lookup
   el('lookup-btn').addEventListener('click', lookupAgent);
   el('lookup-address').addEventListener('keypress', (e) => {
     if (e.key === 'Enter') lookupAgent();
   });
 
-  // Chat (placeholder — needs Groq API key)
   el('chat-send').addEventListener('click', () => {
     showToast('Chat requires Groq API integration', 'error');
   });
 
-  // Keyboard shortcuts
   document.addEventListener('keydown', (e) => {
     if (e.key === 'Escape') closeOrderModal();
   });
 
-  // Wallet events
   if (window.ethereum) {
     window.ethereum.on('accountsChanged', (accounts) => {
       if (accounts.length === 0) {
         userAddress = null;
         signer = null;
         el('connect-btn').textContent = 'Connect Wallet';
+        el('connect-btn').classList.remove('connected');
         el('withdraw-btn').disabled = true;
       } else {
         connectWallet();
@@ -608,11 +658,51 @@ function formatEthShort(wei) {
   return eth.toFixed(2) + ' ETH';
 }
 
+function escapeHtml(str) {
+  const div = document.createElement('div');
+  div.textContent = str;
+  return div.innerHTML;
+}
+
+function animateNumber(elementId, target) {
+  const elem = el(elementId);
+  const current = parseInt(elem.textContent.replace(/,/g, '')) || 0;
+  if (current === target) return;
+
+  // For small differences or first load, just set it
+  if (Math.abs(target - current) < 3 || elem.textContent === '--') {
+    elem.textContent = target.toLocaleString();
+    return;
+  }
+
+  // Animate the count
+  elem.classList.add('counting');
+  const duration = 600;
+  const start = performance.now();
+
+  function step(now) {
+    const elapsed = now - start;
+    const progress = Math.min(elapsed / duration, 1);
+    const eased = 1 - Math.pow(1 - progress, 3); // ease-out cubic
+    const value = Math.round(current + (target - current) * eased);
+    elem.textContent = value.toLocaleString();
+
+    if (progress < 1) {
+      requestAnimationFrame(step);
+    } else {
+      elem.classList.remove('counting');
+    }
+  }
+
+  requestAnimationFrame(step);
+}
+
 function showToast(msg, type = '') {
   const toast = el('toast');
   toast.textContent = msg;
   toast.className = `toast ${type}`;
-  setTimeout(() => toast.classList.add('hidden'), 4000);
+  clearTimeout(toast._timeout);
+  toast._timeout = setTimeout(() => toast.classList.add('hidden'), 4000);
 }
 
 // ============================================================

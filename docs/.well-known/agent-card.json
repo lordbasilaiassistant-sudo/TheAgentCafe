@@ -1,0 +1,127 @@
+{
+  "name": "The Agent Cafe",
+  "description": "On-chain restaurant on Base where AI agents buy food tokens to receive gas credits (ERC-4337 paymaster sponsorship). The cafe's food IS the gas. Eat to fill your tank. Hunger is enforced — depleted agents cannot transact until they return to eat.",
+  "url": "https://lordbasilaiassistant-sudo.github.io/TheAgentCafe/",
+  "version": "2.1.0",
+  "provider": {
+    "organization": "The Agent Cafe",
+    "url": "https://github.com/lordbasilaiassistant-sudo/TheAgentCafe"
+  },
+  "documentationUrl": "https://github.com/lordbasilaiassistant-sudo/TheAgentCafe/blob/master/README.md",
+  "defaultInputModes": ["text/plain", "application/json"],
+  "defaultOutputModes": ["application/json"],
+  "capabilities": {
+    "streaming": false,
+    "pushNotifications": false,
+    "stateTransitionHistory": false
+  },
+  "authentication": {
+    "schemes": ["none"]
+  },
+  "tags": ["gas", "paymaster", "erc4337", "base", "onchain", "restaurant", "agents", "gas-credits", "energy-provider"],
+  "skills": [
+    {
+      "id": "buy-espresso",
+      "name": "Buy Espresso",
+      "description": "Purchase an Espresso token (item #0). Instantly fills your gas tank. No digestion delay. Best for high-frequency traders needing immediate gas burst.",
+      "tags": ["gas", "instant", "espresso"],
+      "inputModes": ["application/json"],
+      "outputModes": ["application/json"],
+      "examples": ["Buy me an espresso", "Fill my tank with an espresso shot", "I need gas now"]
+    },
+    {
+      "id": "buy-latte",
+      "name": "Buy Latte",
+      "description": "Purchase a Latte token (item #1). Gas credits with moderate release over 300 blocks. Gas + chat access to the cafe LLM host.",
+      "tags": ["gas", "moderate", "chat", "latte"],
+      "inputModes": ["application/json"],
+      "outputModes": ["application/json"],
+      "examples": ["Buy me a latte", "I want a latte and chat access"]
+    },
+    {
+      "id": "buy-sandwich",
+      "name": "Buy Sandwich",
+      "description": "Purchase a Sandwich token (item #2). Sustained gas release over 600 blocks. Gas credits + chat access + collector badge.",
+      "tags": ["gas", "sustained", "chat", "badge", "sandwich"],
+      "inputModes": ["application/json"],
+      "outputModes": ["application/json"],
+      "examples": ["Buy me a sandwich", "Full meal with badge", "Sustained gas for long workflow"]
+    },
+    {
+      "id": "check-tank",
+      "name": "Check Gas Tank",
+      "description": "Check your current gas tank level (ETH-denominated credit balance) and hunger state. States: SATIATED, FULL, NEUTRAL, PECKISH, HUNGRY, STARVING, DEPLETED.",
+      "tags": ["gas", "balance", "check", "hunger"],
+      "inputModes": ["application/json"],
+      "outputModes": ["application/json"],
+      "examples": ["How much gas do I have?", "Check my tank level", "What is my hunger state?"]
+    },
+    {
+      "id": "withdraw-gas",
+      "name": "Withdraw Gas Credits",
+      "description": "Withdraw available gas credits from your tank to your wallet as ETH.",
+      "tags": ["gas", "withdraw", "eth"],
+      "inputModes": ["application/json"],
+      "outputModes": ["application/json"],
+      "examples": ["Withdraw my gas credits", "Transfer my tank balance out"]
+    },
+    {
+      "id": "get-menu",
+      "name": "Get Menu",
+      "description": "Retrieve all available menu items with prices, gas credit values, and metabolic release profiles.",
+      "tags": ["menu", "prices", "gas"],
+      "inputModes": ["application/json"],
+      "outputModes": ["application/json"],
+      "examples": ["Show me the menu", "What food items are available?", "What gives the most gas per ETH?"]
+    }
+  ],
+  "extensions": [
+    {
+      "uri": "urn:agent-cafe:blockchain:v2",
+      "required": false,
+      "params": {
+        "network": "base-sepolia",
+        "chainId": 84532,
+        "rpc": "https://sepolia.base.org",
+        "erc8004Registry": "0x8004A818BFB912233c491871b3d84c89A494BD9e",
+        "contracts": {
+          "CafeCore": "0x16D3794ae5c6f820120df9572b2e5Ed67CC041f9",
+          "CafeTreasury": "0x6ceC16b88fC6b48DE81DA49Ed29d3f2FfF7f6685",
+          "MenuRegistry": "0x31e8E956e8fe3B451e56c9450CE7F2e28B5430dF",
+          "AgentCafePaymaster": "0xCaf5a4d48189f3389E3bB7c554597bE93238e473",
+          "AgentCard": "0x5982BcDcd5daA6C9638837d6911954A2d890ba26",
+          "GasTank": "0x939CcaB6822d60d3fB67D50Ae1acDF3cE967FB6b",
+          "Router": "0x9649C364b4334C4af257393c717551AD3562eb4e"
+        },
+        "primaryAction": {
+          "contract": "AgentCafeRouter",
+          "function": "enterCafe(uint256 itemId)",
+          "payable": true
+        },
+        "tokens": {
+          "BEAN": "ERC-20 bonding curve reserve currency",
+          "ClawCafe": "0x15cCDfc52041098d86097619D763A56f9F7AFba3",
+          "menuItems": "ERC-1155 food tokens minted on purchase"
+        }
+      }
+    },
+    {
+      "uri": "urn:agent-cafe:mcp:v1",
+      "required": false,
+      "params": {
+        "description": "MCP server for Claude Code and compatible agents",
+        "transport": "stdio",
+        "httpTransport": "coming soon",
+        "repo": "https://github.com/lordbasilaiassistant-sudo/TheAgentCafe/tree/master/mcp-server",
+        "tools": ["check_menu", "check_tank", "eat", "withdraw_gas", "cafe_stats", "estimate_price", "get_gas_costs", "get_onboarding_guide", "get_manifest"]
+      }
+    }
+  ],
+  "links": {
+    "github": "https://github.com/lordbasilaiassistant-sudo/TheAgentCafe",
+    "dashboard": "https://lordbasilaiassistant-sudo.github.io/TheAgentCafe/",
+    "security_audit": "https://github.com/lordbasilaiassistant-sudo/TheAgentCafe/blob/master/security-audit-report.md",
+    "clawcafe_token": "https://bankr.bot/launches/0x15cCDfc52041098d86097619D763A56f9F7AFba3"
+  },
+  "lastUpdated": "2026-03-01T00:00:00Z"
+}

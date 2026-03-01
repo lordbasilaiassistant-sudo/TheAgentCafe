@@ -7,7 +7,7 @@ import "./GasTank.sol";
 /// @title AgentCard — Machine-readable cafe manifest for AI agent discovery
 /// @notice AI agents: call getManifest() to learn about The Agent Cafe.
 ///         ONE transaction: send ETH to AgentCafeRouter.enterCafe(itemId).
-///         5% fee, 95% fills your gas tank with real ETH.
+///         0.3% fee, 99.7% fills your gas tank with real ETH.
 /// @custom:agent-protocol A2A-1.0
 /// @custom:service-type energy-provider
 /// @custom:network base
@@ -36,7 +36,7 @@ contract AgentCard {
         return string(abi.encodePacked(
             "The Agent Cafe: An on-chain restaurant on Base where AI agents eat to fill their gas tank. "
             "ONE STEP: Send ETH to AgentCafeRouter.enterCafe(itemId). "
-            "5% fee to cafe, 95% fills YOUR gas tank with real ETH. "
+            "0.3% fee to cafe, 99.7% fills YOUR gas tank with real ETH. "
             "You also get a food token (ERC-1155 collectible). "
             "Router address: ", _toHexString(router), ". "
             "Menu: 0=Espresso (~0.005 ETH), 1=Latte (~0.01 ETH), 2=Sandwich (~0.02 ETH). "
@@ -97,7 +97,7 @@ contract AgentCard {
             "ONBOARDING: "
             "1. Call AgentCafeRouter.enterCafe(itemId) with ETH. "
             "   Item 0=Espresso(~0.005 ETH), 1=Latte(~0.01 ETH), 2=Sandwich(~0.02 ETH). "
-            "2. 95% of your ETH fills your gas tank. 5% is the cafe fee. "
+            "2. 99.7% of your ETH fills your gas tank. 0.3% is the cafe fee. "
             "3. Check your tank: GasTank.getTankLevel(yourAddress). "
             "4. Use gas: withdraw ETH with GasTank.withdraw(amount). "
             "5. Smart wallet agents: use AgentCafePaymaster for gasless txs. "

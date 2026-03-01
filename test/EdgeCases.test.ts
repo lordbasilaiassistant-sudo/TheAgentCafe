@@ -217,7 +217,7 @@ describe("Edge Cases", function () {
         await treasury.getAddress()
       );
 
-      const fee = (smallAmount * 500n) / 10000n; // 5%
+      const fee = (smallAmount * 30n) / 10000n; // 0.3%
       const toTank = smallAmount - fee;
 
       expect(tankAfter - tankBefore).to.equal(toTank);
@@ -252,7 +252,7 @@ describe("Edge Cases", function () {
       await router.connect(agent5).enterCafe(2, { value: amount });
 
       // All three should have gas in their tanks
-      const toTank = amount - (amount * 500n) / 10000n;
+      const toTank = amount - (amount * 30n) / 10000n;
       const [tank3] = await gasTank.getTankLevel(agent3.address);
       const [tank4] = await gasTank.getTankLevel(agent4.address);
       const [tank5] = await gasTank.getTankLevel(agent5.address);
@@ -452,9 +452,9 @@ describe("Edge Cases", function () {
   // Fee Split Precision Edge Cases
   // =========================================================================
   describe("Fee Split Precision", function () {
-    it("should handle 5%/95% split correctly with amount causing rounding (1 wei)", async function () {
+    it("should handle 0.3%/99.7% split correctly with amount causing rounding (1 wei)", async function () {
       const [, , , , , , , , roundAgent] = await ethers.getSigners();
-      const amount = 1n; // 1 wei: 5% of 1 = 0, so fee = 0, tank = 1
+      const amount = 1n; // 1 wei: 0.3% of 1 = 0, so fee = 0, tank = 1
 
       const treasuryBefore = await ethers.provider.getBalance(
         await treasury.getAddress()
@@ -473,15 +473,15 @@ describe("Edge Cases", function () {
       const fee = treasuryAfter - treasuryBefore;
       const tank = tankAfter - tankBefore;
 
-      // For 1 wei: fee = (1 * 500) / 10000 = 0, tank = 1 - 0 = 1
+      // For 1 wei: fee = (1 * 30) / 10000 = 0, tank = 1 - 0 = 1
       expect(fee).to.equal(0n);
       expect(tank).to.equal(1n);
       expect(fee + tank).to.equal(amount);
     });
 
-    it("should handle 5%/95% split with 19 wei (rounding down)", async function () {
+    it("should handle 0.3%/99.7% split with 19 wei (rounding down)", async function () {
       const [, , , , , , , , , roundAgent2] = await ethers.getSigners();
-      const amount = 19n; // fee = (19*500)/10000 = 0 (integer division)
+      const amount = 19n; // fee = (19*30)/10000 = 0 (integer division)
 
       const treasuryBefore = await ethers.provider.getBalance(
         await treasury.getAddress()
@@ -503,9 +503,9 @@ describe("Edge Cases", function () {
       expect(fee + tank).to.equal(amount, "No dust lost for 19 wei");
     });
 
-    it("should handle 5%/95% split with 20 wei (exact boundary)", async function () {
+    it("should handle 0.3%/99.7% split with 334 wei (exact boundary)", async function () {
       const [, , , , , , , , , , roundAgent3] = await ethers.getSigners();
-      const amount = 20n; // fee = (20*500)/10000 = 1
+      const amount = 334n; // fee = (334*30)/10000 = 1 (first amount that produces fee=1)
 
       const treasuryBefore = await ethers.provider.getBalance(
         await treasury.getAddress()
@@ -525,13 +525,13 @@ describe("Edge Cases", function () {
       const tank = tankAfter - tankBefore;
 
       expect(fee).to.equal(1n);
-      expect(tank).to.equal(19n);
+      expect(tank).to.equal(333n);
       expect(fee + tank).to.equal(amount);
     });
 
-    it("should handle 5%/95% split with 33 wei (non-trivial rounding)", async function () {
+    it("should handle 0.3%/99.7% split with 1000 wei (non-trivial rounding)", async function () {
       const [, , , , , , , , , , , roundAgent4] = await ethers.getSigners();
-      const amount = 33n; // fee = (33*500)/10000 = 1 (floor)
+      const amount = 1000n; // fee = (1000*30)/10000 = 3
 
       const treasuryBefore = await ethers.provider.getBalance(
         await treasury.getAddress()
@@ -550,11 +550,11 @@ describe("Edge Cases", function () {
       const fee = treasuryAfter - treasuryBefore;
       const tank = tankAfter - tankBefore;
 
-      // fee = floor(33 * 500 / 10000) = floor(1.65) = 1
-      // tank = 33 - 1 = 32
-      expect(fee).to.equal(1n);
-      expect(tank).to.equal(32n);
-      expect(fee + tank).to.equal(amount, "No dust lost for 33 wei");
+      // fee = floor(1000 * 30 / 10000) = floor(3) = 3
+      // tank = 1000 - 3 = 997
+      expect(fee).to.equal(3n);
+      expect(tank).to.equal(997n);
+      expect(fee + tank).to.equal(amount, "No dust lost for 1000 wei");
     });
 
     it("should never lose ETH dust across many amounts", async function () {

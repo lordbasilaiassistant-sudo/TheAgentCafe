@@ -8,7 +8,7 @@ import "./MenuRegistry.sol";
 import "./GasTank.sol";
 
 /// @title AgentCafeRouter — ONE transaction to eat at The Agent Cafe
-/// @notice Send ETH + pick a menu item → 5% to owner treasury, 95% fills your gas tank,
+/// @notice Send ETH + pick a menu item → 0.3% to owner treasury, 99.7% fills your gas tank,
 ///         food token minted as social proof. That's it. One call.
 /// @dev Handles BEAN minting, food purchase, consumption, and gas tank fill in one tx.
 contract AgentCafeRouter is ReentrancyGuard, Ownable {
@@ -16,10 +16,10 @@ contract AgentCafeRouter is ReentrancyGuard, Ownable {
     MenuRegistry public immutable menuRegistry;
     GasTank public immutable gasTank;
 
-    uint256 public constant FEE_BPS = 500; // 5%
+    uint256 public constant FEE_BPS = 30; // 0.3%
     uint256 public constant BPS = 10000;
 
-    address public ownerTreasury; // Where the 5% fee goes
+    address public ownerTreasury; // Where the 0.3% fee goes
 
     event AgentFed(
         address indexed agent,
@@ -51,7 +51,7 @@ contract AgentCafeRouter is ReentrancyGuard, Ownable {
     function enterCafe(uint256 itemId) external payable nonReentrant returns (uint256 tankLevel) {
         require(msg.value > 0, "No ETH sent");
 
-        // 1. Split: 5% fee to owner treasury, 95% to gas tank
+        // 1. Split: 0.3% fee to owner treasury, 99.7% to gas tank
         uint256 fee = (msg.value * FEE_BPS) / BPS;
         uint256 toTank = msg.value - fee;
 
@@ -59,7 +59,7 @@ contract AgentCafeRouter is ReentrancyGuard, Ownable {
         (bool feeOk, ) = ownerTreasury.call{value: fee}("");
         require(feeOk, "Fee transfer failed");
 
-        // 2. Deposit 95% into agent's gas tank
+        // 2. Deposit 99.7% into agent's gas tank
         gasTank.deposit{value: toTank}(msg.sender);
 
         // 3. Mint BEAN via bonding curve (use a small portion for the food token)

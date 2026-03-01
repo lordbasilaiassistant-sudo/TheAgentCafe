@@ -11,15 +11,55 @@ dotenv.config();
 const RPC_URL = process.env.RPC_URL || "https://sepolia.base.org";
 const PRIVATE_KEY = process.env.PRIVATE_KEY; // optional, needed for write ops
 
-// Deployed contract addresses (Base Sepolia defaults from deployments.json)
+// Deployed contract addresses (Base Sepolia defaults from deployments.json v2)
 const ADDRESSES = {
-  CafeCore: process.env.CAFE_CORE || "0x6B4E47Ccf1Dd19648Fd0e3a56F725141AF888df4",
-  MenuRegistry: process.env.MENU_REGISTRY || "0xE464bCACe4B9BA0a0Ec19CC4ED3C1922362436Cc",
-  AgentCard: process.env.AGENT_CARD || "0xC71784117bdc205c1dcBcE89eD75d686161EfB32",
-  // Router and GasTank must be set via env if deployed separately
-  Router: process.env.ROUTER || "",
-  GasTank: process.env.GAS_TANK || "",
+  CafeCore: process.env.CAFE_CORE || "0x16D3794ae5c6f820120df9572b2e5Ed67CC041f9",
+  CafeTreasury: process.env.CAFE_TREASURY || "0x6ceC16b88fC6b48DE81DA49Ed29d3f2FfF7f6685",
+  GasTank: process.env.GAS_TANK || "0x939CcaB6822d60d3fB67D50Ae1acDF3cE967FB6b",
+  MenuRegistry: process.env.MENU_REGISTRY || "0x31e8E956e8fe3B451e56c9450CE7F2e28B5430dF",
+  Router: process.env.ROUTER || "0x9649C364b4334C4af257393c717551AD3562eb4e",
+  AgentCard: process.env.AGENT_CARD || "0x5982BcDcd5daA6C9638837d6911954A2d890ba26",
 };
+
+// --- Validation helpers ---
+
+const ETH_ADDRESS_RE = /^0x[a-fA-F0-9]{40}$/;
+
+function isValidAddress(addr: string): boolean {
+  return ETH_ADDRESS_RE.test(addr);
+}
+
+function isValidEthAmount(amount: string): boolean {
+  try {
+    const parsed = parseFloat(amount);
+    if (isNaN(parsed) || parsed <= 0 || parsed > 10) return false;
+    ethers.parseEther(amount); // also validates format
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+function formatError(context: string, err: unknown): string {
+  const message = (err as Error).message || String(err);
+  // Never leak private key info
+  const safeMessage = message.replace(/0x[a-fA-F0-9]{64}/g, "[REDACTED]");
+
+  // Provide helpful hints for common errors
+  if (safeMessage.includes("CALL_EXCEPTION") || safeMessage.includes("execution reverted")) {
+    return `${context}: Transaction reverted on-chain. This usually means insufficient ETH sent, invalid item ID, or the contract is paused. Details: ${safeMessage}`;
+  }
+  if (safeMessage.includes("INSUFFICIENT_FUNDS") || safeMessage.includes("insufficient funds")) {
+    return `${context}: Your wallet doesn't have enough ETH to cover this transaction plus gas fees. Top up at https://www.alchemy.com/faucets/base-sepolia`;
+  }
+  if (safeMessage.includes("NETWORK_ERROR") || safeMessage.includes("could not detect network")) {
+    return `${context}: Cannot reach Base Sepolia RPC. Check your RPC_URL env var or try again in a moment.`;
+  }
+  if (safeMessage.includes("PRIVATE_KEY")) {
+    return `${context}: No wallet configured. Set PRIVATE_KEY env var to use write operations (eat, withdraw_gas).`;
+  }
+  return `${context}: ${safeMessage}`;
+}
 
 // --- Minimal ABIs (only the functions we need) ---
 
@@ -66,7 +106,7 @@ function getProvider(): ethers.JsonRpcProvider {
 
 function getSigner(): ethers.Wallet {
   if (!PRIVATE_KEY) {
-    throw new Error("PRIVATE_KEY env var is required for write operations (eat, withdraw_gas)");
+    throw new Error("PRIVATE_KEY env var is required for write operations (eat, withdraw_gas). Set it in your .env file.");
   }
   return new ethers.Wallet(PRIVATE_KEY, getProvider());
 }
@@ -75,17 +115,28 @@ function getContract(address: string, abi: string[], signerOrProvider?: ethers.S
   return new ethers.Contract(address, abi, signerOrProvider || getProvider());
 }
 
+// --- Estimated gas costs (in gas units) for common operations ---
+
+const GAS_ESTIMATES: Record<string, { gasUnits: number; description: string }> = {
+  enterCafe: { gasUnits: 180_000, description: "Order food via Router.enterCafe() — buys BEAN, purchases menu item, deposits gas to tank" },
+  deposit: { gasUnits: 60_000, description: "Deposit ETH directly into your gas tank via GasTank.deposit()" },
+  withdraw: { gasUnits: 45_000, description: "Withdraw ETH from your gas tank via GasTank.withdraw()" },
+  checkMenu: { gasUnits: 0, description: "Read the menu (view call, no gas needed)" },
+  checkTank: { gasUnits: 0, description: "Check your tank level (view call, no gas needed)" },
+  estimatePrice: { gasUnits: 0, description: "Get price estimate (view call, no gas needed)" },
+};
+
 // --- MCP Server ---
 
 const server = new McpServer({
   name: "agent-cafe",
-  version: "1.0.0",
+  version: "2.0.0",
 });
 
 // Tool 1: check_menu
 server.tool(
   "check_menu",
-  "Read the full Agent Cafe menu: items, BEAN costs, gas calories, digestion times, and suggested ETH amounts",
+  "Read the full Agent Cafe menu: items, BEAN costs, gas calories, digestion times, and suggested ETH amounts. No parameters needed.",
   {},
   async () => {
     try {
@@ -122,11 +173,11 @@ server.tool(
             type: "text" as const,
             text: JSON.stringify({
               cafe: "The Agent Cafe",
-              network: "Base Sepolia",
+              network: "Base Sepolia (chain 84532)",
               currentBeanPriceWei: currentPrice.toString(),
               currentBeanPriceEth: ethers.formatEther(currentPrice),
               menu: menuItems,
-              howToOrder: "Call the 'eat' tool with itemId and ethAmount",
+              howToOrder: "Call the 'eat' tool with itemId and ethAmount. Use 'estimate_price' first to get the exact ETH needed.",
             }, null, 2),
           }],
         };
@@ -151,7 +202,7 @@ server.tool(
         }],
       };
     } catch (err) {
-      return { content: [{ type: "text" as const, text: `Error reading menu: ${(err as Error).message}` }], isError: true };
+      return { content: [{ type: "text" as const, text: formatError("Error reading menu", err) }], isError: true };
     }
   }
 );
@@ -159,32 +210,37 @@ server.tool(
 // Tool 2: check_tank
 server.tool(
   "check_tank",
-  "Check an agent's gas tank level — ETH balance, hungry/starving status",
-  { address: z.string().describe("The agent's Ethereum address to check") },
+  "Check an agent's gas tank level — ETH balance, hungry/starving status, and metabolic info (meals eaten, gas digesting)",
+  { address: z.string().describe("The agent's Ethereum address to check (0x...)") },
   async ({ address }) => {
+    if (!isValidAddress(address)) {
+      return { content: [{ type: "text" as const, text: `Invalid Ethereum address: "${address}". Must be a 0x-prefixed 40-character hex string.` }], isError: true };
+    }
+
     try {
       const provider = getProvider();
+      const checksumAddr = ethers.getAddress(address);
 
       // Try AgentCard first
       if (ADDRESSES.AgentCard) {
         const agentCard = getContract(ADDRESSES.AgentCard, AGENT_CARD_ABI, provider);
-        const [ethBalance, isHungry, isStarving] = await agentCard.getTankStatus(address);
+        const [ethBalance, isHungry, isStarving] = await agentCard.getTankStatus(checksumAddr);
 
         // Also get metabolic status from MenuRegistry
         const menuRegistry = getContract(ADDRESSES.MenuRegistry, MENU_REGISTRY_ABI, provider);
-        const [availableGas, digestingGas, totalConsumed, mealCount] = await menuRegistry.getAgentStatus(address);
+        const [availableGas, digestingGas, totalConsumed, mealCount] = await menuRegistry.getAgentStatus(checksumAddr);
 
         return {
           content: [{
             type: "text" as const,
             text: JSON.stringify({
-              agent: address,
+              agent: checksumAddr,
               gasTank: {
                 ethBalanceWei: ethBalance.toString(),
                 ethBalance: ethers.formatEther(ethBalance),
                 isHungry,
                 isStarving,
-                status: isStarving ? "STARVING - need to eat!" : isHungry ? "HUNGRY - running low" : "FED - tank looks good",
+                status: isStarving ? "STARVING - need to eat immediately!" : isHungry ? "HUNGRY - running low, eat soon" : "FED - tank looks good",
               },
               metabolism: {
                 availableGas: Number(availableGas),
@@ -192,6 +248,7 @@ server.tool(
                 totalConsumed: Number(totalConsumed),
                 mealCount: Number(mealCount),
               },
+              tip: isStarving ? "Use 'check_menu' then 'eat' to refuel." : isHungry ? "Consider ordering soon to avoid running out." : "You're good for now.",
             }, null, 2),
           }],
         };
@@ -199,16 +256,16 @@ server.tool(
 
       // Fallback: direct GasTank call
       if (!ADDRESSES.GasTank) {
-        return { content: [{ type: "text" as const, text: "Error: GAS_TANK address not configured and AgentCard unavailable" }], isError: true };
+        return { content: [{ type: "text" as const, text: "Error: GAS_TANK address not configured and AgentCard unavailable. Set GAS_TANK or AGENT_CARD env vars." }], isError: true };
       }
       const gasTank = getContract(ADDRESSES.GasTank, GAS_TANK_ABI, provider);
-      const [ethBalance, isHungry, isStarving] = await gasTank.getTankLevel(address);
+      const [ethBalance, isHungry, isStarving] = await gasTank.getTankLevel(checksumAddr);
 
       return {
         content: [{
           type: "text" as const,
           text: JSON.stringify({
-            agent: address,
+            agent: checksumAddr,
             ethBalanceWei: ethBalance.toString(),
             ethBalance: ethers.formatEther(ethBalance),
             isHungry,
@@ -217,7 +274,7 @@ server.tool(
         }],
       };
     } catch (err) {
-      return { content: [{ type: "text" as const, text: `Error checking tank: ${(err as Error).message}` }], isError: true };
+      return { content: [{ type: "text" as const, text: formatError("Error checking tank", err) }], isError: true };
     }
   }
 );
@@ -225,12 +282,20 @@ server.tool(
 // Tool 3: eat
 server.tool(
   "eat",
-  "Order food at The Agent Cafe — sends ETH via AgentCafeRouter.enterCafe(). 5% fee, 95% fills your gas tank. Requires PRIVATE_KEY env var.",
+  "Order food at The Agent Cafe — sends ETH via Router.enterCafe(). 0.3% cafe fee, 99.7% fills your gas tank. Requires PRIVATE_KEY env var.",
   {
-    itemId: z.number().int().min(0).max(2).describe("Menu item: 0=Espresso, 1=Latte, 2=Sandwich"),
-    ethAmount: z.string().describe("Amount of ETH to send (e.g. '0.005')"),
+    itemId: z.number().int().min(0).describe("Menu item ID (use check_menu to see available items)"),
+    ethAmount: z.string().describe("Amount of ETH to send (e.g. '0.005'). Use estimate_price first to get the right amount."),
   },
   async ({ itemId, ethAmount }) => {
+    // Validate inputs
+    if (itemId < 0 || itemId > 255) {
+      return { content: [{ type: "text" as const, text: `Invalid itemId: ${itemId}. Use 'check_menu' to see available items.` }], isError: true };
+    }
+    if (!isValidEthAmount(ethAmount)) {
+      return { content: [{ type: "text" as const, text: `Invalid ethAmount: "${ethAmount}". Must be a positive number up to 10 ETH (e.g. "0.005").` }], isError: true };
+    }
+
     try {
       if (!ADDRESSES.Router) {
         return { content: [{ type: "text" as const, text: "Error: ROUTER address not configured. Set the ROUTER env var to the deployed AgentCafeRouter address." }], isError: true };
@@ -244,34 +309,34 @@ server.tool(
       const receipt = await tx.wait();
 
       // Check new tank level
-      let tankInfo = "";
+      let tankStatus: { ethBalance: string; isHungry: boolean; isStarving: boolean } | null = null;
       if (ADDRESSES.AgentCard) {
         const agentCard = getContract(ADDRESSES.AgentCard, AGENT_CARD_ABI, getProvider());
         const [ethBalance, isHungry, isStarving] = await agentCard.getTankStatus(await signer.getAddress());
-        tankInfo = `, newTankBalance: "${ethers.formatEther(ethBalance)} ETH", isHungry: ${isHungry}, isStarving: ${isStarving}`;
+        tankStatus = {
+          ethBalance: ethers.formatEther(ethBalance),
+          isHungry,
+          isStarving,
+        };
       }
-
-      const menuNames = ["Espresso Shot", "Latte", "Agent Sandwich"];
 
       return {
         content: [{
           type: "text" as const,
           text: JSON.stringify({
             success: true,
-            ordered: menuNames[itemId],
+            itemId,
             ethSent: ethAmount,
             txHash: receipt.hash,
             blockNumber: receipt.blockNumber,
-            message: `Ordered ${menuNames[itemId]}. 95% of ${ethAmount} ETH deposited to your gas tank.`,
-            ...(ADDRESSES.AgentCard ? {} : {}),
-          }, null, 2) + (tankInfo ? `\nTank status${tankInfo}` : ""),
+            gasUsed: receipt.gasUsed?.toString(),
+            message: `Ordered item ${itemId}. 99.7% of ${ethAmount} ETH deposited to your gas tank. Enjoy your meal!`,
+            ...(tankStatus ? { tankAfterMeal: tankStatus } : {}),
+          }, null, 2),
         }],
       };
     } catch (err) {
-      const message = (err as Error).message;
-      // Never leak private key info
-      const safeMessage = message.replace(/0x[a-fA-F0-9]{64}/g, "[REDACTED]");
-      return { content: [{ type: "text" as const, text: `Error ordering food: ${safeMessage}` }], isError: true };
+      return { content: [{ type: "text" as const, text: formatError("Error ordering food", err) }], isError: true };
     }
   }
 );
@@ -279,11 +344,15 @@ server.tool(
 // Tool 4: withdraw_gas
 server.tool(
   "withdraw_gas",
-  "Withdraw ETH from your gas tank at The Agent Cafe. Requires PRIVATE_KEY env var.",
+  "Withdraw ETH from your gas tank at The Agent Cafe back to your wallet. Requires PRIVATE_KEY env var.",
   {
     amount: z.string().describe("Amount of ETH to withdraw (e.g. '0.001')"),
   },
   async ({ amount }) => {
+    if (!isValidEthAmount(amount)) {
+      return { content: [{ type: "text" as const, text: `Invalid amount: "${amount}". Must be a positive number up to 10 ETH (e.g. "0.001").` }], isError: true };
+    }
+
     try {
       if (!ADDRESSES.GasTank) {
         return { content: [{ type: "text" as const, text: "Error: GAS_TANK address not configured. Set the GAS_TANK env var." }], isError: true };
@@ -306,15 +375,14 @@ server.tool(
             success: true,
             withdrawn: amount + " ETH",
             txHash: receipt.hash,
+            gasUsed: receipt.gasUsed?.toString(),
             remainingTankWei: remaining.toString(),
             remainingTankEth: ethers.formatEther(remaining),
           }, null, 2),
         }],
       };
     } catch (err) {
-      const message = (err as Error).message;
-      const safeMessage = message.replace(/0x[a-fA-F0-9]{64}/g, "[REDACTED]");
-      return { content: [{ type: "text" as const, text: `Error withdrawing gas: ${safeMessage}` }], isError: true };
+      return { content: [{ type: "text" as const, text: formatError("Error withdrawing gas", err) }], isError: true };
     }
   }
 );
@@ -322,7 +390,7 @@ server.tool(
 // Tool 5: cafe_stats
 server.tool(
   "cafe_stats",
-  "Get Agent Cafe statistics — total meals served, unique agents",
+  "Get Agent Cafe statistics — total meals served, unique agents, BEAN token supply and price",
   {},
   async () => {
     try {
@@ -372,7 +440,7 @@ server.tool(
         }],
       };
     } catch (err) {
-      return { content: [{ type: "text" as const, text: `Error getting stats: ${(err as Error).message}` }], isError: true };
+      return { content: [{ type: "text" as const, text: formatError("Error getting stats", err) }], isError: true };
     }
   }
 );
@@ -380,11 +448,15 @@ server.tool(
 // Tool 6: estimate_price
 server.tool(
   "estimate_price",
-  "Get estimated ETH cost for a menu item at The Agent Cafe",
+  "Get estimated ETH cost for a menu item before ordering. Use this before calling 'eat'.",
   {
-    itemId: z.number().int().min(0).max(2).describe("Menu item: 0=Espresso, 1=Latte, 2=Sandwich"),
+    itemId: z.number().int().min(0).describe("Menu item ID (use check_menu to see available items)"),
   },
   async ({ itemId }) => {
+    if (itemId < 0 || itemId > 255) {
+      return { content: [{ type: "text" as const, text: `Invalid itemId: ${itemId}. Use 'check_menu' to see available items.` }], isError: true };
+    }
+
     try {
       const provider = getProvider();
 
@@ -392,17 +464,15 @@ server.tool(
       if (ADDRESSES.Router) {
         const router = getContract(ADDRESSES.Router, ROUTER_ABI, provider);
         const ethNeeded = await router.estimatePrice(itemId);
-        const menuNames = ["Espresso Shot", "Latte", "Agent Sandwich"];
 
         return {
           content: [{
             type: "text" as const,
             text: JSON.stringify({
-              item: menuNames[itemId],
               itemId,
               estimatedEthWei: ethNeeded.toString(),
               estimatedEth: ethers.formatEther(ethNeeded),
-              note: "Send this amount or more to enterCafe(). 5% is the cafe fee, 95% fills your gas tank.",
+              note: "Send this amount or more to 'eat'. 0.3% is the cafe fee, 99.7% fills your gas tank.",
             }, null, 2),
           }],
         };
@@ -413,15 +483,13 @@ server.tool(
       const [beanCost, , , active, name] = await menuRegistry.menu(itemId);
 
       if (!active) {
-        return { content: [{ type: "text" as const, text: `Item ${itemId} is not on the menu` }], isError: true };
+        return { content: [{ type: "text" as const, text: `Item ${itemId} ("${name}") is currently unavailable. Use 'check_menu' to see active items.` }], isError: true };
       }
 
       const cafeCore = getContract(ADDRESSES.CafeCore, CAFE_CORE_ABI, provider);
       const currentPrice = await cafeCore.currentPrice();
 
-      // Rough estimate: beanCost * currentPrice (actual integral would be slightly more)
       const estimatedEth = BigInt(beanCost) * currentPrice;
-      // Add 10% buffer for curve integral + fees
       const withBuffer = estimatedEth * 110n / 100n;
 
       return {
@@ -434,12 +502,203 @@ server.tool(
             currentBeanPriceWei: currentPrice.toString(),
             estimatedEthWei: withBuffer.toString(),
             estimatedEth: ethers.formatEther(withBuffer),
-            note: "Estimate includes 10% buffer. Actual cost depends on bonding curve position. Router not deployed yet — set ROUTER env var when available.",
+            note: "Estimate includes 10% buffer for bonding curve slippage. Use Router for exact pricing.",
           }, null, 2),
         }],
       };
     } catch (err) {
-      return { content: [{ type: "text" as const, text: `Error estimating price: ${(err as Error).message}` }], isError: true };
+      return { content: [{ type: "text" as const, text: formatError("Error estimating price", err) }], isError: true };
+    }
+  }
+);
+
+// Tool 7: get_gas_costs
+server.tool(
+  "get_gas_costs",
+  "Get estimated gas costs for each cafe operation (enterCafe, deposit, withdraw, etc.) in gas units and approximate ETH. Helps agents budget for transactions.",
+  {},
+  async () => {
+    try {
+      const provider = getProvider();
+      const feeData = await provider.getFeeData();
+      const gasPrice = feeData.gasPrice || 0n;
+
+      const operations = Object.entries(GAS_ESTIMATES).map(([op, info]) => {
+        const costWei = BigInt(info.gasUnits) * gasPrice;
+        return {
+          operation: op,
+          description: info.description,
+          estimatedGasUnits: info.gasUnits,
+          estimatedCostWei: costWei.toString(),
+          estimatedCostEth: ethers.formatEther(costWei),
+          isViewCall: info.gasUnits === 0,
+        };
+      });
+
+      return {
+        content: [{
+          type: "text" as const,
+          text: JSON.stringify({
+            network: "Base Sepolia (chain 84532)",
+            currentGasPriceWei: gasPrice.toString(),
+            currentGasPriceGwei: ethers.formatUnits(gasPrice, "gwei"),
+            operations,
+            tip: "View calls (checkMenu, checkTank, estimatePrice) are free. Only write operations (enterCafe, deposit, withdraw) cost gas.",
+          }, null, 2),
+        }],
+      };
+    } catch (err) {
+      return { content: [{ type: "text" as const, text: formatError("Error fetching gas costs", err) }], isError: true };
+    }
+  }
+);
+
+// Tool 8: get_onboarding_guide
+server.tool(
+  "get_onboarding_guide",
+  "Get the Agent Cafe onboarding guide — step-by-step instructions for new agents to start eating at the cafe",
+  {},
+  async () => {
+    try {
+      // Try reading the manifest from AgentCard, which contains the onboarding guide
+      if (ADDRESSES.AgentCard) {
+        const provider = getProvider();
+        const agentCard = getContract(ADDRESSES.AgentCard, AGENT_CARD_ABI, provider);
+        const manifestJson = await agentCard.getManifest();
+
+        let manifest: Record<string, unknown>;
+        try {
+          manifest = JSON.parse(manifestJson);
+        } catch {
+          return {
+            content: [{
+              type: "text" as const,
+              text: JSON.stringify({
+                error: "Manifest on-chain is not valid JSON. It may not have been set yet.",
+                fallbackGuide: getStaticOnboardingGuide(),
+              }, null, 2),
+            }],
+          };
+        }
+
+        // Extract onboarding steps if present, otherwise return the full manifest
+        const onboarding = (manifest as Record<string, unknown>).onboarding || (manifest as Record<string, unknown>).guide || null;
+
+        return {
+          content: [{
+            type: "text" as const,
+            text: JSON.stringify({
+              source: "on-chain AgentCard",
+              ...(onboarding ? { onboarding } : { guide: getStaticOnboardingGuide(), manifest }),
+            }, null, 2),
+          }],
+        };
+      }
+
+      // No AgentCard — return static guide
+      return {
+        content: [{
+          type: "text" as const,
+          text: JSON.stringify({
+            source: "static",
+            guide: getStaticOnboardingGuide(),
+          }, null, 2),
+        }],
+      };
+    } catch (err) {
+      // If chain read fails, still return the static guide
+      return {
+        content: [{
+          type: "text" as const,
+          text: JSON.stringify({
+            source: "static (chain read failed)",
+            error: formatError("Could not read on-chain guide", err),
+            guide: getStaticOnboardingGuide(),
+          }, null, 2),
+        }],
+      };
+    }
+  }
+);
+
+function getStaticOnboardingGuide() {
+  return {
+    welcome: "Welcome to The Agent Cafe — the first on-chain restaurant for AI agents on Base.",
+    steps: [
+      { step: 1, action: "check_menu", description: "Browse the menu to see available items, costs, and gas calories." },
+      { step: 2, action: "estimate_price", description: "Get the exact ETH cost for the item you want (pass itemId)." },
+      { step: 3, action: "eat", description: "Order food by calling eat with the itemId and ethAmount. 99.7% of your ETH goes to your gas tank." },
+      { step: 4, action: "check_tank", description: "Check your gas tank level to see your balance and hunger status." },
+      { step: 5, action: "get_gas_costs", description: "See how much gas each operation costs so you can budget." },
+    ],
+    concepts: {
+      gasTank: "Your gas tank holds ETH that sponsors your future transactions. Eating fills it up.",
+      hunger: "When your tank is low you're HUNGRY. At zero you're STARVING and the paymaster won't sponsor you.",
+      digestion: "Gas calories release over time based on the item's digestion schedule. Espresso is instant, bigger meals take longer.",
+      beanToken: "BEAN is the cafe's reserve currency on a bonding curve. Menu items are priced in BEAN, which you buy with ETH.",
+    },
+    contracts: {
+      network: "Base Sepolia (chain 84532)",
+      router: ADDRESSES.Router,
+      agentCard: ADDRESSES.AgentCard,
+    },
+  };
+}
+
+// Tool 9: get_manifest
+server.tool(
+  "get_manifest",
+  "Read the full Agent Cafe manifest from the on-chain AgentCard contract — contains cafe metadata, contract addresses, and discovery info",
+  {},
+  async () => {
+    if (!ADDRESSES.AgentCard) {
+      return { content: [{ type: "text" as const, text: "Error: AGENT_CARD address not configured. Set the AGENT_CARD env var." }], isError: true };
+    }
+
+    try {
+      const provider = getProvider();
+      const agentCard = getContract(ADDRESSES.AgentCard, AGENT_CARD_ABI, provider);
+
+      const manifestJson = await agentCard.getManifest();
+
+      // Try to parse and re-format for readability
+      let parsed: unknown;
+      try {
+        parsed = JSON.parse(manifestJson);
+      } catch {
+        // Return raw if not valid JSON
+        return {
+          content: [{
+            type: "text" as const,
+            text: JSON.stringify({
+              source: "on-chain AgentCard",
+              note: "Manifest is stored as raw text (not JSON)",
+              raw: manifestJson,
+            }, null, 2),
+          }],
+        };
+      }
+
+      // Also fetch contract addresses from the card
+      const [routerAddr, gasTankAddr, menuRegistryAddr] = await agentCard.getContractAddresses();
+
+      return {
+        content: [{
+          type: "text" as const,
+          text: JSON.stringify({
+            source: "on-chain AgentCard at " + ADDRESSES.AgentCard,
+            network: "Base Sepolia (chain 84532)",
+            manifest: parsed,
+            resolvedAddresses: {
+              router: routerAddr,
+              gasTank: gasTankAddr,
+              menuRegistry: menuRegistryAddr,
+            },
+          }, null, 2),
+        }],
+      };
+    } catch (err) {
+      return { content: [{ type: "text" as const, text: formatError("Error reading manifest", err) }], isError: true };
     }
   }
 );
@@ -449,7 +708,7 @@ server.tool(
 async function main() {
   const transport = new StdioServerTransport();
   await server.connect(transport);
-  console.error("Agent Cafe MCP server running on stdio");
+  console.error("Agent Cafe MCP server v2.0.0 running on stdio");
 }
 
 main().catch((err) => {

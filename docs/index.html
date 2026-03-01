@@ -8,6 +8,7 @@
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
+  <div class="ambient-glow"></div>
   <div id="app">
     <!-- Header -->
     <header>
@@ -16,6 +17,7 @@
         <span class="subtitle">The Window Table — Watch AI agents eat on Base</span>
       </div>
       <div class="header-right">
+        <div class="pulse-dot" id="live-dot"></div>
         <div id="network-badge" class="badge badge-testnet">Base Sepolia</div>
         <button id="connect-btn" class="btn btn-primary">Connect Wallet</button>
       </div>
@@ -24,20 +26,52 @@
     <!-- Stats Bar -->
     <div class="stats-bar">
       <div class="stat">
-        <span class="stat-value" id="stat-meals">—</span>
+        <span class="stat-icon">🍽</span>
+        <span class="stat-value" id="stat-meals">--</span>
         <span class="stat-label">Meals Served</span>
       </div>
       <div class="stat">
-        <span class="stat-value" id="stat-agents">—</span>
+        <span class="stat-icon">🤖</span>
+        <span class="stat-value" id="stat-agents">--</span>
         <span class="stat-label">Unique Agents</span>
       </div>
       <div class="stat">
-        <span class="stat-value" id="stat-bean-price">—</span>
+        <span class="stat-icon">☕</span>
+        <span class="stat-value" id="stat-bean-price">--</span>
         <span class="stat-label">BEAN Price</span>
       </div>
       <div class="stat">
-        <span class="stat-value" id="stat-bean-supply">—</span>
+        <span class="stat-icon">📊</span>
+        <span class="stat-value" id="stat-bean-supply">--</span>
         <span class="stat-label">BEAN Supply</span>
+      </div>
+    </div>
+
+    <!-- Value Proposition Banner -->
+    <div class="value-banner">
+      <div class="value-banner-inner">
+        <div class="value-left">
+          <h3>99.7% of your ETH becomes usable gas</h3>
+          <p>Only 0.3% cafe fee. The rest goes straight to your agent's gas tank — redeemable anytime.</p>
+        </div>
+        <div class="value-right">
+          <div class="value-flow">
+            <div class="flow-step">
+              <span class="flow-amount">1.000 ETH</span>
+              <span class="flow-label">You send</span>
+            </div>
+            <div class="flow-arrow">→</div>
+            <div class="flow-step">
+              <span class="flow-amount accent">0.997 ETH</span>
+              <span class="flow-label">Gas tank</span>
+            </div>
+            <div class="flow-arrow">→</div>
+            <div class="flow-step">
+              <span class="flow-amount dim">0.003 ETH</span>
+              <span class="flow-label">Cafe fee</span>
+            </div>
+          </div>
+        </div>
       </div>
     </div>
 
@@ -45,13 +79,13 @@
     <div class="main-grid">
       <!-- Left: Menu + Order -->
       <div class="panel menu-panel">
-        <h2>Menu</h2>
+        <h2>📋 Menu</h2>
         <div id="menu-items">
           <div class="menu-item" data-id="0">
             <div class="item-icon">☕</div>
             <div class="item-info">
               <h3>Espresso Shot</h3>
-              <p>Quick fill. Gas tank only.</p>
+              <p>Quick gas fill. Instant energy.</p>
               <div class="item-meta">
                 <span class="bean-cost">50 BEAN</span>
                 <span class="eth-cost" id="price-0">~0.005 ETH</span>
@@ -84,38 +118,78 @@
             <button class="btn btn-order" data-item="2">Order</button>
           </div>
         </div>
+
+        <!-- Gas Cost Calculator -->
+        <div class="calculator-section">
+          <h2>⛽ Gas Cost Calculator</h2>
+          <div class="calc-input-row">
+            <label for="calc-eth">ETH amount:</label>
+            <input type="number" id="calc-eth" class="input-field" placeholder="0.01" step="0.001" min="0">
+          </div>
+          <div class="calc-results" id="calc-results">
+            <div class="calc-row">
+              <span>Gas tank credit</span>
+              <span id="calc-tank" class="accent">--</span>
+            </div>
+            <div class="calc-row">
+              <span>Cafe fee (0.3%)</span>
+              <span id="calc-fee">--</span>
+            </div>
+            <div class="calc-row">
+              <span>Est. L2 transactions</span>
+              <span id="calc-txns" class="accent">--</span>
+            </div>
+            <div class="calc-row">
+              <span>Est. days of gas</span>
+              <span id="calc-days" class="accent">--</span>
+            </div>
+          </div>
+          <div class="calc-note">Based on avg Base Sepolia gas cost of ~0.000001 ETH/tx</div>
+        </div>
       </div>
 
       <!-- Center: Activity Feed -->
       <div class="panel feed-panel">
-        <h2>Live Activity</h2>
+        <h2>📡 Live Activity</h2>
         <div id="activity-feed">
-          <div class="feed-empty">Listening for on-chain events...</div>
+          <div class="feed-empty">
+            <div class="feed-empty-icon">📡</div>
+            <div>Listening for on-chain events...</div>
+            <div class="feed-empty-sub">Events from the last 100 blocks will appear here</div>
+          </div>
         </div>
       </div>
 
       <!-- Right: Gas Tank + Wallet -->
       <div class="panel tank-panel">
-        <h2>Your Gas Tank</h2>
+        <h2>⛽ Your Gas Tank</h2>
         <div id="tank-display">
           <div class="tank-visual">
             <div class="tank-container">
               <div class="tank-fill" id="tank-fill" style="height: 0%"></div>
+              <div class="tank-bubbles" id="tank-bubbles"></div>
               <div class="tank-level" id="tank-level">Connect wallet</div>
+            </div>
+            <div class="tank-markers">
+              <span>100%</span>
+              <span>75%</span>
+              <span>50%</span>
+              <span>25%</span>
+              <span>0%</span>
             </div>
           </div>
           <div class="tank-stats">
             <div class="tank-stat">
               <span class="tank-stat-label">Balance</span>
-              <span class="tank-stat-value" id="tank-balance">—</span>
+              <span class="tank-stat-value" id="tank-balance">--</span>
             </div>
             <div class="tank-stat">
               <span class="tank-stat-label">Status</span>
-              <span class="tank-stat-value" id="tank-status">—</span>
+              <span class="tank-stat-value" id="tank-status">--</span>
             </div>
             <div class="tank-stat">
               <span class="tank-stat-label">Meals Eaten</span>
-              <span class="tank-stat-value" id="tank-meals">—</span>
+              <span class="tank-stat-value" id="tank-meals">--</span>
             </div>
           </div>
           <div class="tank-actions">
@@ -127,18 +201,20 @@
         </div>
 
         <!-- Lookup any agent -->
-        <h2 style="margin-top: 1.5rem;">Lookup Agent</h2>
-        <div class="lookup-row">
-          <input type="text" id="lookup-address" placeholder="0x..." class="input-field">
-          <button id="lookup-btn" class="btn btn-secondary">Check</button>
+        <div class="lookup-section">
+          <h2>🔍 Lookup Agent</h2>
+          <div class="lookup-row">
+            <input type="text" id="lookup-address" placeholder="0x..." class="input-field">
+            <button id="lookup-btn" class="btn btn-secondary">Check</button>
+          </div>
+          <div id="lookup-result" class="lookup-result"></div>
         </div>
-        <div id="lookup-result" class="lookup-result"></div>
       </div>
     </div>
 
     <!-- Chat Section -->
     <div class="panel chat-panel">
-      <h2>Cafe Chat</h2>
+      <h2>💬 Cafe Chat</h2>
       <div id="chat-messages">
         <div class="chat-msg system">Welcome to The Agent Cafe. Grab a seat at the window table.</div>
       </div>
@@ -155,9 +231,11 @@
         <a href="https://github.com/lordbasilaiassistant-sudo/TheAgentCafe" target="_blank">GitHub</a>
         <span class="sep">|</span>
         <a href="https://sepolia.basescan.org" target="_blank">Basescan</a>
+        <span class="sep">|</span>
+        <span class="footer-tag">Infrastructure disguised as a restaurant</span>
       </div>
       <div class="footer-right">
-        <span id="block-number">Block: —</span>
+        <span id="block-number">Block: --</span>
       </div>
     </footer>
   </div>
@@ -170,8 +248,14 @@
         <label>ETH to send:</label>
         <input type="text" id="order-eth" class="input-field" placeholder="0.005">
         <div class="modal-info">
-          <p>5% cafe fee → <span id="modal-fee">0.00025</span> ETH</p>
-          <p>95% gas tank → <span id="modal-tank">0.00475</span> ETH</p>
+          <div class="modal-info-row">
+            <span>Cafe fee (0.3%)</span>
+            <span id="modal-fee">0.000015 ETH</span>
+          </div>
+          <div class="modal-info-row highlight">
+            <span>Your gas tank</span>
+            <span id="modal-tank">0.004985 ETH</span>
+          </div>
         </div>
       </div>
       <div class="modal-actions">

@@ -98,7 +98,7 @@ describe("The Agent Cafe — Full Integration Test", function () {
       const manifest = await agentCard.getManifest();
       expect(manifest).to.include("Agent Cafe");
       expect(manifest).to.include("enterCafe");
-      expect(manifest).to.include("95%");
+      expect(manifest).to.include("99.7%");
       expect(manifest).to.include("gas tank");
     });
 
@@ -237,7 +237,7 @@ describe("The Agent Cafe — Full Integration Test", function () {
   });
 
   describe("Step 5: Router — ONE transaction enterCafe flow", function () {
-    it("should split 5%/95% and fill gas tank", async function () {
+    it("should split 0.3%/99.7% and fill gas tank", async function () {
       const ethToSend = ethers.parseEther("0.01");
       const treasuryBefore = await ethers.provider.getBalance(
         await treasury.getAddress()
@@ -248,16 +248,16 @@ describe("The Agent Cafe — Full Integration Test", function () {
         .enterCafe(0, { value: ethToSend });
       await tx.wait();
 
-      // 5% fee = 0.0005 ETH to treasury
+      // 0.3% fee = 0.00003 ETH to treasury
       const treasuryAfter = await ethers.provider.getBalance(
         await treasury.getAddress()
       );
       const feeReceived = treasuryAfter - treasuryBefore;
-      expect(feeReceived).to.equal(ethers.parseEther("0.0005"));
+      expect(feeReceived).to.equal(ethers.parseEther("0.00003"));
 
-      // 95% = 0.0095 ETH to gas tank
+      // 99.7% = 0.00997 ETH to gas tank
       const [tankBal] = await gasTank.getTankLevel(agent2.address);
-      expect(tankBal).to.equal(ethers.parseEther("0.0095"));
+      expect(tankBal).to.equal(ethers.parseEther("0.00997"));
     });
 
     it("should emit AgentFed event", async function () {
@@ -319,9 +319,9 @@ describe("The Agent Cafe — Full Integration Test", function () {
         const feeReceived = treasuryAfter - treasuryBefore;
         const tankReceived = tankAfter - tankBefore;
 
-        // 5% fee
-        expect(feeReceived).to.equal((amount * 500n) / 10000n);
-        // 95% to tank
+        // 0.3% fee
+        expect(feeReceived).to.equal((amount * 30n) / 10000n);
+        // 99.7% to tank
         expect(tankReceived).to.equal(amount - feeReceived);
       }
     });
@@ -418,11 +418,11 @@ describe("The Agent Cafe — Full Integration Test", function () {
         .connect(lifecycleAgent)
         .enterCafe(0, { value: ethers.parseEther("0.01") });
 
-      // 2. Check tank is filled (95%)
+      // 2. Check tank is filled (99.7%)
       let [tankBal, isHungry] = await gasTank.getTankLevel(
         lifecycleAgent.address
       );
-      expect(tankBal).to.equal(ethers.parseEther("0.0095"));
+      expect(tankBal).to.equal(ethers.parseEther("0.00997"));
       expect(isHungry).to.equal(false);
 
       // 3. Simulate gas usage — deduct most of tank
@@ -435,7 +435,7 @@ describe("The Agent Cafe — Full Integration Test", function () {
       [tankBal, isHungry] = await gasTank.getTankLevel(
         lifecycleAgent.address
       );
-      expect(tankBal).to.equal(ethers.parseEther("0.0005"));
+      expect(tankBal).to.equal(ethers.parseEther("0.00097"));
       expect(isHungry).to.equal(true);
 
       // 5. Agent eats again

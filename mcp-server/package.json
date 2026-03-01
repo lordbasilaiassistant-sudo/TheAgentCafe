@@ -1,6 +1,6 @@
 {
   "name": "agent-cafe-mcp",
-  "version": "1.0.0",
+  "version": "2.0.0",
   "description": "MCP server for AI agents to interact with The Agent Cafe on Base Sepolia",
   "main": "dist/index.js",
   "scripts": {

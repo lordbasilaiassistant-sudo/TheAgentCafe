@@ -3,7 +3,7 @@ import { buildModule } from "@nomicfoundation/hardhat-ignition/modules";
 // Base Sepolia EntryPoint v0.7
 const ENTRY_POINT_V07 = "0x0000000071727De22E5E9d8BAf0edAc6f37da032";
 
-const AgentCafeModule = buildModule("AgentCafe", (m) => {
+const AgentCafeModule = buildModule("AgentCafeV2", (m) => {
   // 1. Deploy CafeCore (bonding curve for BEAN)
   const cafeCore = m.contract("CafeCore");
 
