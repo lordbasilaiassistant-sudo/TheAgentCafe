@@ -13,11 +13,11 @@ const CONFIG = {
   contracts: {
     CafeCore:          '0x30eCCeD36E715e88c40A418E9325cA08a5085143',
     CafeTreasury:      '0x600f6Ee140eadf39D3b038c3d907761994aA28D0',
-    MenuRegistry:      '0x611e8814D9b8E0c1bfB019889eEe66C210F64333',
+    MenuRegistry:      '0x2F604e61f0843Ac99bd0d4a8b5736c1FCEAb7258',
     AgentCafePaymaster:'0x5fA91E27F81d3a11014104A28D92b35a5dDA1997',
-    AgentCard:         '0x79dcc87A3518699E85ff6D3318ADF016097629f4',
+    AgentCard:         '0xd4c19e7cEDa32A306cc36cdD8a09E86b2e69425C',
     GasTank:           '0xC369ba8d99908261b930F0255fe03218e5965258',
-    Router:            '0xB923FCFDE8c40B8b9047916EAe5c580aa7679266',
+    Router:            '0x9C21dB53203F00BeE73341D6BA8D6C8D61bd1De4',
     CafeSocial:        '0xf4a3CA7c8ef35E8434dA9c1C67Ef30a58dcB33Ee',
   },
 

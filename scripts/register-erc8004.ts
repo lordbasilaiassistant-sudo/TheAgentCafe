@@ -41,8 +41,8 @@ import * as path from "path";
 const IDENTITY_REGISTRY_SEPOLIA = "0x8004A818BFB912233c491871b3d84c89A494BD9e";
 const IDENTITY_REGISTRY_MAINNET = "0x8004A169FB4a3325136EB29fA0ceB6D2e539a432";
 
-// Update this to your GitHub Pages URL once live
-const AGENT_URI = "https://agentcafe.xyz/.well-known/agent.json";
+// GitHub Pages URL — resolves to the live agent.json
+const AGENT_URI = "https://lordbasilaiassistant-sudo.github.io/TheAgentCafe/.well-known/agent.json";
 
 // Load deployed contract addresses
 const deploymentsPath = path.join(__dirname, "..", "deployments.json");

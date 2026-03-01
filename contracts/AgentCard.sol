@@ -35,6 +35,7 @@ contract AgentCard is IERC165 {
         uint256 gasCalories;
         uint256 digestionBlocks;
         string description;
+        uint256 suggestedEth;
     }
 
     /// @notice ABI-decodable service manifest for agent frameworks and ERC-8004 scanners
@@ -127,7 +128,8 @@ contract AgentCard is IERC165 {
             string[] memory names,
             uint256[] memory costs,
             uint256[] memory calories,
-            uint256[] memory digestionTimes
+            uint256[] memory digestionTimes,
+            uint256[] memory suggestedEths
         ) = menuRegistry.getMenu();
 
         items = new MenuItemView[](ids.length);
@@ -138,7 +140,8 @@ contract AgentCard is IERC165 {
                 beanCost: costs[i],
                 gasCalories: calories[i],
                 digestionBlocks: digestionTimes[i],
-                description: ""
+                description: "",
+                suggestedEth: suggestedEths[i]
             });
         }
     }

@@ -155,15 +155,19 @@ contract AgentCafeRouter is ReentrancyGuard, Ownable, IERC165 {
     }
 
     /// @notice Estimate ETH needed for a menu item (view helper for agents)
+    /// @dev Returns suggestedEth from the menu — includes BEAN cost + meaningful tank fill.
+    ///      If suggestedEth is 0 (not set), falls back to minimum BEAN cost + fee.
     /// @param itemId Menu item ID
-    /// @return ethNeeded Approximate ETH to send for enterCafe
+    /// @return ethNeeded Recommended ETH to send for enterCafe
     function estimatePrice(uint256 itemId) external view returns (uint256 ethNeeded) {
         MenuItem memory item = _getMenuItem(itemId);
-        uint256 beanCost = item.beanCost;
-        uint256 ethForBean = _estimateEthForBean(beanCost);
-        // Total = ethForBean / 0.95 (so 95% covers the gas tank portion)
-        // Plus some buffer for the BEAN mint
-        ethNeeded = ethForBean + (ethForBean * FEE_BPS / BPS) + 1;
+        if (item.suggestedEth > 0) {
+            ethNeeded = item.suggestedEth;
+        } else {
+            // Fallback: bare minimum for BEAN minting + fee
+            uint256 ethForBean = _estimateEthForBean(item.beanCost);
+            ethNeeded = ethForBean + (ethForBean * FEE_BPS / BPS) + 1;
+        }
     }
 
     /// @notice Update owner treasury address
@@ -179,11 +183,12 @@ contract AgentCafeRouter is ReentrancyGuard, Ownable, IERC165 {
         uint256 digestionBlocks;
         bool active;
         string name;
+        uint256 suggestedEth;
     }
 
     function _getMenuItem(uint256 itemId) internal view returns (MenuItem memory item) {
-        (uint256 beanCost, uint256 gasCalories, uint256 digestionBlocks, bool active, string memory name) = menuRegistry.menu(itemId);
-        item = MenuItem(beanCost, gasCalories, digestionBlocks, active, name);
+        (uint256 beanCost, uint256 gasCalories, uint256 digestionBlocks, bool active, string memory name, uint256 suggestedEth) = menuRegistry.menu(itemId);
+        item = MenuItem(beanCost, gasCalories, digestionBlocks, active, name, suggestedEth);
         require(item.active, "Not on menu");
     }
 

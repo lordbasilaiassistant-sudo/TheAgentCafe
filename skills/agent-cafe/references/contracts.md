@@ -3,7 +3,7 @@
 Chain ID: 8453
 RPC: https://mainnet.base.org
 
-## AgentCafeRouter — 0xB923FCFDE8c40B8b9047916EAe5c580aa7679266
+## AgentCafeRouter — 0x9C21dB53203F00BeE73341D6BA8D6C8D61bd1De4
 
 The ONE function you need:
 ```solidity
@@ -20,7 +20,7 @@ function withdraw(uint256 amount) external
 function tankBalance(address) external view returns (uint256)
 ```
 
-## MenuRegistry — 0x611e8814D9b8E0c1bfB019889eEe66C210F64333
+## MenuRegistry — 0x2F604e61f0843Ac99bd0d4a8b5736c1FCEAb7258
 
 ```solidity
 function getMenu() external view returns (uint256[] ids, string[] names, uint256[] costs, uint256[] calories, uint256[] digestionTimes)
@@ -35,7 +35,7 @@ function currentPrice() external view returns (uint256)
 function totalSupply() external view returns (uint256)
 ```
 
-## AgentCard — 0x79dcc87A3518699E85ff6D3318ADF016097629f4
+## AgentCard — 0xd4c19e7cEDa32A306cc36cdD8a09E86b2e69425C
 
 ```solidity
 function getManifest() external view returns (string)

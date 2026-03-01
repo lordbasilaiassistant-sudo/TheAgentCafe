@@ -13,17 +13,17 @@ const CHUNK_SIZE = 2000; // smaller chunks for public RPCs
 
 // v3.0 addresses (scan from deploy block for historical events)
 const V30_ADDRESSES = {
-  MenuRegistry: "0x611e8814D9b8E0c1bfB019889eEe66C210F64333",
+  MenuRegistry: "0x2F604e61f0843Ac99bd0d4a8b5736c1FCEAb7258",
   GasTank: "0x49Ed25a6130Ef4dD236999c065F0f3A66Bc0D7A4",
   Router: "0xD1921387508C9B8B5183eA558fcdfe8A1804A62B",
   CafeSocial: "0xCAd49C3095D0c67B86E5343E748215B07347Eb48",
 };
 
-// v3.1 addresses (current — scan from V31_DEPLOY_BLOCK)
+// v4.1 addresses (current)
 const ADDRESSES = {
-  MenuRegistry: "0x611e8814D9b8E0c1bfB019889eEe66C210F64333",
+  MenuRegistry: "0x2F604e61f0843Ac99bd0d4a8b5736c1FCEAb7258",
   GasTank: "0xC369ba8d99908261b930F0255fe03218e5965258",
-  Router: "0xB923FCFDE8c40B8b9047916EAe5c580aa7679266",
+  Router: "0x9C21dB53203F00BeE73341D6BA8D6C8D61bd1De4",
   CafeSocial: "0xf4a3CA7c8ef35E8434dA9c1C67Ef30a58dcB33Ee",
 };
 

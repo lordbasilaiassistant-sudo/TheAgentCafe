@@ -18,6 +18,9 @@ coverage.json
 .claude/
 CLAUDE.md
 
+# MCP config (may contain private keys in env)
+.mcp.json
+
 # Hardhat ignition deployments (contain addresses, not secrets, but env-specific)
 ignition/deployments/
 

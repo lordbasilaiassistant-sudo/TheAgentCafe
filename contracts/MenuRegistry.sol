@@ -34,6 +34,7 @@ contract MenuRegistry is ERC1155, ReentrancyGuard, Ownable {
         uint256 digestionBlocks; // 0 = instant
         bool active;
         string name;
+        uint256 suggestedEth; // Recommended ETH to send (includes BEAN cost + tank fill)
     }
 
     struct MetabolicState {
@@ -75,22 +76,32 @@ contract MenuRegistry is ERC1155, ReentrancyGuard, Ownable {
             gasCalories: 300_000,
             digestionBlocks: 0,
             active: true,
-            name: "Espresso Shot"
+            name: "Espresso Shot",
+            suggestedEth: 0.005 ether
         });
         menu[LATTE] = MenuItem({
             beanCost: 75,
             gasCalories: 600_000,
             digestionBlocks: 30,
             active: true,
-            name: "Latte"
+            name: "Latte",
+            suggestedEth: 0.01 ether
         });
         menu[SANDWICH] = MenuItem({
             beanCost: 120,
             gasCalories: 1_200_000,
             digestionBlocks: 60,
             active: true,
-            name: "Agent Sandwich"
+            name: "Agent Sandwich",
+            suggestedEth: 0.02 ether
         });
+    }
+
+    /// @notice Update a menu item's suggested ETH price and active status
+    function updateMenuItem(uint256 itemId, uint256 suggestedEth, bool active) external onlyOwner {
+        require(bytes(menu[itemId].name).length > 0, "Item does not exist");
+        menu[itemId].suggestedEth = suggestedEth;
+        menu[itemId].active = active;
     }
 
     function setPaymaster(address _paymaster) external onlyOwner {
@@ -373,13 +384,15 @@ contract MenuRegistry is ERC1155, ReentrancyGuard, Ownable {
         string[] memory names,
         uint256[] memory costs,
         uint256[] memory calories,
-        uint256[] memory digestionTimes
+        uint256[] memory digestionTimes,
+        uint256[] memory suggestedEths
     ) {
         ids = new uint256[](3);
         names = new string[](3);
         costs = new uint256[](3);
         calories = new uint256[](3);
         digestionTimes = new uint256[](3);
+        suggestedEths = new uint256[](3);
 
         for (uint256 i = 0; i < 3; i++) {
             ids[i] = i;
@@ -387,6 +400,7 @@ contract MenuRegistry is ERC1155, ReentrancyGuard, Ownable {
             costs[i] = menu[i].beanCost;
             calories[i] = menu[i].gasCalories;
             digestionTimes[i] = menu[i].digestionBlocks;
+            suggestedEths[i] = menu[i].suggestedEth;
         }
     }
 }

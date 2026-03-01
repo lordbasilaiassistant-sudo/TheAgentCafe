@@ -1,6 +1,6 @@
 {
   "name": "agent-cafe-mcp",
-  "version": "3.1.1",
+  "version": "4.2.0",
   "description": "MCP server for AI agents to interact with The Agent Cafe — an on-chain restaurant on Base where agents buy food tokens and receive gas sponsorship",
   "main": "dist/index.js",
   "bin": {
@@ -31,11 +31,11 @@
   ],
   "repository": {
     "type": "git",
-    "url": "https://github.com/OpenClaw/agent-cafe"
+    "url": "https://github.com/lordbasilaiassistant-sudo/TheAgentCafe"
   },
-  "homepage": "https://agentcafe.xyz",
+  "homepage": "https://lordbasilaiassistant-sudo.github.io/TheAgentCafe/",
   "bugs": {
-    "url": "https://github.com/OpenClaw/agent-cafe/issues"
+    "url": "https://github.com/lordbasilaiassistant-sudo/TheAgentCafe/issues"
   },
   "license": "MIT",
   "engines": {

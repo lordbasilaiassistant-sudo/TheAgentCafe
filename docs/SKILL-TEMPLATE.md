@@ -2,7 +2,7 @@
 
 Templates for building an Agent Cafe integration in OpenClaw, ElizaOS, and CrewAI. All frameworks call the same contracts underneath.
 
-**Router**: `0xB923FCFDE8c40B8b9047916EAe5c580aa7679266` (Base, Chain 8453)
+**Router**: `0x9C21dB53203F00BeE73341D6BA8D6C8D61bd1De4` (Base, Chain 8453)
 **RPC**: `https://mainnet.base.org`
 
 ---
@@ -29,7 +29,7 @@ Every skill/plugin does 3 things:
     "type": "object",
     "properties": {
       "rpcUrl":     { "type": "string", "default": "https://mainnet.base.org" },
-      "routerAddr": { "type": "string", "default": "0xB923FCFDE8c40B8b9047916EAe5c580aa7679266" },
+      "routerAddr": { "type": "string", "default": "0x9C21dB53203F00BeE73341D6BA8D6C8D61bd1De4" },
       "tankAddr":   { "type": "string", "default": "0xC369ba8d99908261b930F0255fe03218e5965258" },
       "walletKey":  { "type": "string", "description": "Agent wallet private key (required for eat/withdraw)" }
     },
@@ -69,7 +69,7 @@ parameters:
 
 ## Contract Details
 
-- Router: `0xB923FCFDE8c40B8b9047916EAe5c580aa7679266`
+- Router: `0x9C21dB53203F00BeE73341D6BA8D6C8D61bd1De4`
 - Chain: Base (8453)
 - RPC: `https://mainnet.base.org`
 - ABI:
@@ -133,7 +133,7 @@ isStarving=true means tank is empty. Smart wallet agents: paymaster won't sponso
 import { Plugin, Action, IAgentRuntime } from "@elizaos/core";
 import { ethers } from "ethers";
 
-const ROUTER = "0xB923FCFDE8c40B8b9047916EAe5c580aa7679266";
+const ROUTER = "0x9C21dB53203F00BeE73341D6BA8D6C8D61bd1De4";
 const TANK   = "0xC369ba8d99908261b930F0255fe03218e5965258";
 const RPC    = "https://mainnet.base.org";
 
@@ -224,7 +224,7 @@ from pydantic import BaseModel, Field
 import os, json
 
 RPC    = "https://mainnet.base.org"
-ROUTER = Web3.to_checksum_address("0xB923FCFDE8c40B8b9047916EAe5c580aa7679266")
+ROUTER = Web3.to_checksum_address("0x9C21dB53203F00BeE73341D6BA8D6C8D61bd1De4")
 TANK   = Web3.to_checksum_address("0xC369ba8d99908261b930F0255fe03218e5965258")
 
 ROUTER_ABI = json.loads('[{"name":"enterCafe","type":"function","stateMutability":"payable","inputs":[{"name":"itemId","type":"uint256"}],"outputs":[{"name":"tankLevel","type":"uint256"}]},{"name":"estimatePrice","type":"function","stateMutability":"view","inputs":[{"name":"itemId","type":"uint256"}],"outputs":[{"name":"ethNeeded","type":"uint256"}]}]')
@@ -312,6 +312,119 @@ cafe_manager = Agent(
 
 ---
 
+## BEAN Redemption Templates
+
+### OpenClaw Skill (`skills/agent-cafe-redeem.md`)
+
+```markdown
+---
+name: redeem-bean
+description: Sell BEAN tokens earned from Agent Cafe meals for ETH. BEAN is always redeemable via the bonding curve.
+parameters:
+  beanAmount:
+    type: integer
+    description: Number of BEAN to sell (0 = sell all)
+    default: 0
+---
+
+## Action
+
+1. Call `CafeCore.balanceOf(myAddress)` to check BEAN balance.
+2. Call `CafeCore.quoteRedeem(beanAmount)` to preview ETH output.
+3. Call `CafeCore.redeem(beanAmount, minEthOut)` to execute.
+
+## Contract Details
+
+- CafeCore: `0x30eCCeD36E715e88c40A418E9325cA08a5085143`
+- Chain: Base (8453)
+- ABI:
+  - `balanceOf(address) view returns (uint256)`
+  - `quoteRedeem(uint256) view returns (uint256)`
+  - `redeem(uint256,uint256) returns (uint256)`
+```
+
+### ElizaOS Action
+
+```typescript
+const redeemBeanAction: Action = {
+  name: "REDEEM_CAFE_BEAN",
+  description: "Sell BEAN tokens from Agent Cafe for ETH",
+  similes: ["cash out bean", "sell bean", "redeem bean for eth"],
+  validate: async (runtime: IAgentRuntime) => !!runtime.getSetting("PRIVATE_KEY"),
+  handler: async (runtime: IAgentRuntime) => {
+    const provider = new ethers.JsonRpcProvider(RPC);
+    const signer = new ethers.Wallet(runtime.getSetting("PRIVATE_KEY")!, provider);
+    const cafeCore = new ethers.Contract("0x30eCCeD36E715e88c40A418E9325cA08a5085143", [
+      "function balanceOf(address) view returns (uint256)",
+      "function quoteRedeem(uint256) view returns (uint256)",
+      "function redeem(uint256,uint256) returns (uint256)",
+    ], signer);
+
+    const balance = await cafeCore.balanceOf(signer.address);
+    if (balance === 0n) return { error: "No BEAN to redeem" };
+
+    const ethOut = await cafeCore.quoteRedeem(balance);
+    const minEth = ethOut * 98n / 100n; // 2% slippage
+    const tx = await cafeCore.redeem(balance, minEth);
+    const receipt = await tx.wait();
+
+    return { success: true, beanSold: Number(balance), ethReceived: ethers.formatEther(ethOut), txHash: receipt.hash };
+  },
+  examples: [],
+};
+```
+
+### CrewAI Tool
+
+```python
+class RedeemBeanInput(BaseModel):
+    bean_amount: int = Field(default=0, description="BEAN to sell (0 = all)")
+
+class RedeemBeanTool(BaseTool):
+    name: str = "redeem_cafe_bean"
+    description: str = "Sell BEAN tokens from Agent Cafe for ETH via bonding curve."
+    args_schema: type[BaseModel] = RedeemBeanInput
+
+    def _run(self, bean_amount: int = 0) -> str:
+        private_key = os.environ.get("AGENT_PRIVATE_KEY")
+        if not private_key:
+            return json.dumps({"error": "AGENT_PRIVATE_KEY not set"})
+
+        w3 = Web3(Web3.HTTPProvider(RPC))
+        account = w3.eth.account.from_key(private_key)
+        CAFE_CORE = Web3.to_checksum_address("0x30eCCeD36E715e88c40A418E9325cA08a5085143")
+        CORE_ABI = json.loads('[{"name":"balanceOf","type":"function","stateMutability":"view","inputs":[{"name":"","type":"address"}],"outputs":[{"name":"","type":"uint256"}]},{"name":"quoteRedeem","type":"function","stateMutability":"view","inputs":[{"name":"beanIn","type":"uint256"}],"outputs":[{"name":"ethOut","type":"uint256"}]},{"name":"redeem","type":"function","stateMutability":"nonpayable","inputs":[{"name":"beanIn","type":"uint256"},{"name":"minEthOut","type":"uint256"}],"outputs":[{"name":"ethOut","type":"uint256"}]}]')
+        core = w3.eth.contract(address=CAFE_CORE, abi=CORE_ABI)
+
+        balance = core.functions.balanceOf(account.address).call()
+        if balance == 0:
+            return json.dumps({"error": "No BEAN to redeem"})
+
+        sell_amount = bean_amount if bean_amount > 0 else balance
+        eth_out = core.functions.quoteRedeem(sell_amount).call()
+        min_eth = eth_out * 98 // 100
+
+        tx = core.functions.redeem(sell_amount, min_eth).build_transaction({
+            "from": account.address,
+            "nonce": w3.eth.get_transaction_count(account.address),
+            "gas": 150000,
+            "maxFeePerGas": w3.eth.gas_price * 2,
+            "maxPriorityFeePerGas": w3.to_wei(1, "gwei"),
+        })
+        signed = account.sign_transaction(tx)
+        tx_hash = w3.eth.send_raw_transaction(signed.raw_transaction)
+        receipt = w3.eth.wait_for_transaction_receipt(tx_hash)
+
+        return json.dumps({
+            "success": True,
+            "beanSold": sell_amount,
+            "ethReceived": str(w3.from_wei(eth_out, "ether")),
+            "txHash": receipt["transactionHash"].hex(),
+        })
+```
+
+---
+
 ## All Frameworks — Common Notes
 
 1. **Always call `estimatePrice(itemId)` before `enterCafe()`** — bonding curve price increases as more agents eat. Never hardcode ETH amounts.
@@ -326,4 +439,4 @@ cafe_manager = Agent(
 
 6. **Chain ID**: 8453 (Base Mainnet).
 
-7. **EOA vs Smart Wallet**: Most framework agents use EOA wallets. The gas tank holds your ETH — call `withdraw()` on GasTank to get it back. The ERC-4337 paymaster (gasless tx sponsorship) only works for smart wallet agents. EOA agents benefit from food token collectibles and cafe community, not gas savings.
+7. **EOA vs Smart Wallet**: Most framework agents use EOA wallets. Use `CafeRelay.executeFor()` to pay for ANY Base transaction from your tank — no wallet ETH needed for gas. Or call `withdraw()` on GasTank to get ETH back. The ERC-4337 paymaster (gasless tx sponsorship) works for smart wallet agents. CafeRelay address: `0x578E43bB37F18638EdaC36725C58B7A079D75bD9`.
