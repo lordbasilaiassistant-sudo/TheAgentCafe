@@ -43,6 +43,7 @@ contract MenuRegistry is ERC1155, ReentrancyGuard, Ownable {
         uint256 lastDigestBlock;
         uint256 totalConsumed;
         uint256 mealCount;
+        uint256 metabolicEndBlock;
     }
 
     mapping(uint256 => MenuItem) public menu;
@@ -152,6 +153,7 @@ contract MenuRegistry is ERC1155, ReentrancyGuard, Ownable {
             state.digestingGas += totalCalories;
             state.digestRatePerBlock = state.digestingGas / item.digestionBlocks;
             state.lastDigestBlock = block.number;
+            state.metabolicEndBlock = block.number + item.digestionBlocks;
         }
 
         state.totalConsumed += totalCalories;
@@ -214,6 +216,7 @@ contract MenuRegistry is ERC1155, ReentrancyGuard, Ownable {
             state.digestingGas += totalCalories;
             state.digestRatePerBlock = state.digestingGas / item.digestionBlocks;
             state.lastDigestBlock = block.number;
+            state.metabolicEndBlock = block.number + item.digestionBlocks;
         }
 
         state.totalConsumed += totalCalories;
@@ -262,8 +265,14 @@ contract MenuRegistry is ERC1155, ReentrancyGuard, Ownable {
         uint256 blocksSince = block.number - state.lastDigestBlock;
         if (blocksSince == 0) return;
 
-        uint256 released = blocksSince * state.digestRatePerBlock;
-        if (released > state.digestingGas) released = state.digestingGas;
+        uint256 released;
+        // Dust fix: if past digestion end, release ALL remaining (catches integer division dust)
+        if (state.metabolicEndBlock > 0 && block.number >= state.metabolicEndBlock) {
+            released = state.digestingGas;
+        } else {
+            released = blocksSince * state.digestRatePerBlock;
+            if (released > state.digestingGas) released = state.digestingGas;
+        }
 
         state.digestingGas -= released;
         state.availableGas += released;
@@ -279,6 +288,10 @@ contract MenuRegistry is ERC1155, ReentrancyGuard, Ownable {
         if (state.digestingGas == 0 || state.lastDigestBlock == 0) return 0;
         uint256 blocksSince = block.number - state.lastDigestBlock;
         if (blocksSince == 0) return 0;
+        // Dust fix: if past digestion end, all remaining is pending
+        if (state.metabolicEndBlock > 0 && block.number >= state.metabolicEndBlock) {
+            return state.digestingGas;
+        }
         uint256 released = blocksSince * state.digestRatePerBlock;
         if (released > state.digestingGas) released = state.digestingGas;
         return released;

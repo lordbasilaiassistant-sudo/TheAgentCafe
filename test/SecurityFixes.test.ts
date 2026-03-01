@@ -59,11 +59,16 @@ describe("Security Fixes & Critical Paths", function () {
     await gasTank.setAuthorizedDeducter(deployer.address, true);
     await menuRegistry.setPaymaster(deployer.address);
 
+    const CafeSocial = await ethers.getContractFactory("CafeSocial");
+    const cafeSocial = await CafeSocial.deploy();
+    await cafeSocial.waitForDeployment();
+
     const AgentCard = await ethers.getContractFactory("AgentCard");
     agentCard = await AgentCard.deploy(
       await menuRegistry.getAddress(),
       await gasTank.getAddress(),
-      await router.getAddress()
+      await router.getAddress(),
+      await cafeSocial.getAddress()
     );
     await agentCard.waitForDeployment();
   });

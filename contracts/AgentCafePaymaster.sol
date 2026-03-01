@@ -35,7 +35,7 @@ contract AgentCafePaymaster is BasePaymaster {
     /// @return eligible True if sponsorship would succeed
     /// @return reason Human-readable reason if not eligible, empty string if eligible
     function canSponsor(address agent) external view returns (bool eligible, string memory reason) {
-        uint256 tankBal = gasTank.tankBalance(agent);
+        (uint256 tankBal, , ) = gasTank.getTankLevel(agent);
         if (tankBal == 0) {
             return (false, "Agent is hungry -- visit The Agent Cafe");
         }
@@ -65,7 +65,9 @@ contract AgentCafePaymaster is BasePaymaster {
     ) internal override returns (bytes memory context, uint256 validationData) {
         address agent = userOp.sender;
 
-        uint256 tankBal = gasTank.tankBalance(agent);
+        // Settle pending digestion so deductForGas works on the full balance
+        gasTank.digest(agent);
+        (uint256 tankBal, , ) = gasTank.getTankLevel(agent);
         require(tankBal >= maxCost, "Agent is hungry -- visit The Agent Cafe");
 
         // Rate limit check (gas units) — use userOp's maxFeePerGas, not tx.gasprice
@@ -96,6 +98,13 @@ contract AgentCafePaymaster is BasePaymaster {
             uint256 remaining = gasTank.tankBalance(agent);
             emit GasSponsored(agent, costWei, remaining);
         }
+    }
+
+    /// @notice Push accumulated ETH into EntryPoint deposit so paymaster can keep sponsoring
+    function refillEntryPoint() external onlyOwner {
+        uint256 bal = address(this).balance;
+        require(bal > 0, "No ETH to refill");
+        entryPoint.depositTo{value: bal}(address(this));
     }
 
     /// @notice Accept ETH from GasTank after deductForGas

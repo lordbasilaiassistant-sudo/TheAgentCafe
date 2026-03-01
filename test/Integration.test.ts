@@ -70,12 +70,18 @@ describe("The Agent Cafe — Full Integration Test", function () {
     await gasTank.setAuthorizedDeducter(await router.getAddress(), true);
     await gasTank.setAuthorizedDeducter(deployer.address, true);
 
+    // Deploy CafeSocial
+    const CafeSocial = await ethers.getContractFactory("CafeSocial");
+    const cafeSocial = await CafeSocial.deploy();
+    await cafeSocial.waitForDeployment();
+
     // Deploy AgentCard
     const AgentCard = await ethers.getContractFactory("AgentCard");
     agentCard = await AgentCard.deploy(
       await menuRegistry.getAddress(),
       await gasTank.getAddress(),
-      await router.getAddress()
+      await router.getAddress(),
+      await cafeSocial.getAddress()
     );
     await agentCard.waitForDeployment();
 

@@ -108,7 +108,7 @@ contract AgentCafeRouter is ReentrancyGuard, Ownable, IERC165 {
         // 3. Mint BEAN FIRST (before depositing to tank), using the reserved portion
         if (ethForBean > 0) {
             uint256 beanBefore = cafeCore.balanceOf(address(this));
-            cafeCore.mint{value: ethForBean}(0);
+            cafeCore.mint{value: ethForBean}(beanCost);
             uint256 beanMinted = cafeCore.balanceOf(address(this)) - beanBefore;
 
             if (beanMinted >= beanCost) {
@@ -119,6 +119,8 @@ contract AgentCafeRouter is ReentrancyGuard, Ownable, IERC165 {
                 // Consume it for the agent
                 menuRegistry.consumeFor(msg.sender, itemId, 1);
                 gasCaloriesGranted = item.gasCalories;
+            } else {
+                revert("Insufficient BEAN minted -- retry with updated price");
             }
             // Refund excess BEAN to agent
             uint256 excessBean = cafeCore.balanceOf(address(this));

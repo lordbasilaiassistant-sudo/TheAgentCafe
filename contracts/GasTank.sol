@@ -150,6 +150,22 @@ contract GasTank is ReentrancyGuard, Ownable {
         require(ok, "ETH transfer failed");
     }
 
+    /// @notice Agent withdraws ETH to a specified recipient (avoids locked ETH if agent's receive() reverts)
+    /// @param to The recipient address for the withdrawn ETH
+    /// @param amount The amount of ETH to withdraw (in wei)
+    function withdrawTo(address payable to, uint256 amount) external nonReentrant {
+        require(to != address(0), "Zero address");
+        require(amount > 0, "Zero amount");
+        _settleDigestion(msg.sender);
+        require(tankBalance[msg.sender] >= amount, "Insufficient tank balance");
+        tankBalance[msg.sender] -= amount;
+        totalCredited -= amount;
+        _checkHunger(msg.sender);
+        emit Withdrawn(msg.sender, amount, tankBalance[msg.sender]);
+        (bool ok, ) = to.call{value: amount}("");
+        require(ok, "ETH transfer failed");
+    }
+
     /// @notice Deduct ETH from agent's tank after sponsoring gas
     /// @dev Only callable by authorized deducters (paymaster). Settles digestion first.
     ///      Transfers deducted ETH to caller.

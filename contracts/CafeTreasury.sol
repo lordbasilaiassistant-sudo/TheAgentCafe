@@ -5,6 +5,10 @@ import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
+interface ICafeCore {
+    function redeem(uint256 beanIn, uint256 minEthOut) external returns (uint256 ethOut);
+}
+
 /// @title CafeTreasury — Holds BEAN revenue from food consumption
 /// @custom:source https://github.com/lordbasilaiassistant-sudo/TheAgentCafe
 /// @notice Receives 99% of BEAN from every menu item purchase.
@@ -21,9 +25,14 @@ contract CafeTreasury is Ownable, ReentrancyGuard {
         cafeCore = _cafeCore;
     }
 
-    /// @notice Approve CafeCore to pull BEAN for redemption
-    function approveBeanForRedemption(uint256 amount) external onlyOwner {
-        IERC20(cafeCore).approve(cafeCore, amount);
+    /// @notice Redeem BEAN back to ETH via CafeCore bonding curve
+    /// @param beanAmount Amount of BEAN to redeem
+    /// @param minEthOut Minimum ETH to receive (slippage protection)
+    function redeemBEAN(uint256 beanAmount, uint256 minEthOut) external onlyOwner nonReentrant {
+        require(beanAmount > 0, "Zero amount");
+        require(IERC20(cafeCore).balanceOf(address(this)) >= beanAmount, "Insufficient BEAN");
+        // CafeCore.redeem() uses _burn(msg.sender, ...) so no approve needed
+        ICafeCore(cafeCore).redeem(beanAmount, minEthOut);
     }
 
     /// @notice Get BEAN balance held by treasury
