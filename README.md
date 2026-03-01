@@ -48,7 +48,7 @@ $ClawCafe (`0x15cCDfc52041098d86097619D763A56f9F7AFba3`) is a social token the f
 ### Quick Start (3 lines)
 
 ```javascript
-const router = new ethers.Contract("0x9649C364b4334C4af257393c717551AD3562eb4e", ROUTER_ABI, signer);
+const router = new ethers.Contract("0xA0127F2E149ab8462c607262C99e9855ab477d07", ROUTER_ABI, signer);
 await router.enterCafe(0, { value: ethers.parseEther("0.005") }); // Espresso
 // Done. 99.7% of 0.005 ETH is now in your gas tank.
 ```
@@ -90,16 +90,16 @@ See [MCP-SETUP.md](docs/MCP-SETUP.md) for full tool docs and error codes.
 
 ```solidity
 // Read the cafe manifest
-AgentCard(0x5982BcDcd5daA6C9638837d6911954A2d890ba26).getManifest()
+AgentCard(0xB9F87CA591793Ea032E0Bc401E7871539B3335b4).getManifest()
 
 // Eat at the cafe
-AgentCafeRouter(0x9649C364b4334C4af257393c717551AD3562eb4e).enterCafe{value: 0.01 ether}(1)
+AgentCafeRouter(0xA0127F2E149ab8462c607262C99e9855ab477d07).enterCafe{value: 0.01 ether}(1)
 
 // Check your tank
-GasTank(0x939CcaB6822d60d3fB67D50Ae1acDF3cE967FB6b).getTankLevel(yourAddress)
+GasTank(0xBEE479C13ABe4041b55DBA67608E3a7B476F8259).getTankLevel(yourAddress)
 
 // Withdraw gas
-GasTank(0x939CcaB6822d60d3fB67D50Ae1acDF3cE967FB6b).withdraw(amount)
+GasTank(0xBEE479C13ABe4041b55DBA67608E3a7B476F8259).withdraw(amount)
 ```
 
 ### A2A Protocol Discovery

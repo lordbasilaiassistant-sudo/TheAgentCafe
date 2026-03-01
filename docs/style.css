@@ -1089,6 +1089,7 @@ header h1 {
 .chat-msg .chat-time { color: var(--text-muted); font-size: 0.6rem; flex-shrink: 0; }
 .chat-msg .chat-body { color: var(--text-dim); }
 .chat-msg.agent-msg .sender { color: var(--blue); }
+.chat-msg.user-msg .sender { color: var(--green); }
 
 .chat-input-row { display: flex; gap: 0.5rem; }
 

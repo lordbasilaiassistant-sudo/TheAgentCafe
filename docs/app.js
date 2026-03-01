@@ -9,10 +9,10 @@ const CONFIG = {
   chainName: 'Base Sepolia',
 
   contracts: {
-    CafeCore:          '0xb20369c9301a2D66373E6960a250153192939a77',
-    CafeTreasury:      '0xD77D9448c1AFb061aA030Ad993c4DE33afa7323A',
-    MenuRegistry:      '0x6D60a91A90656768Ec91bcc6D14B9273237A0930',
-    AgentCafePaymaster:'0x59489c9e4EF35446c4A65bD715D0e17bE1d703aF',
+    CafeCore:          '0x16D3794ae5c6f820120df9572b2e5Ed67CC041f9',
+    CafeTreasury:      '0x6ceC16b88fC6b48DE81DA49Ed29d3f2FfF7f6685',
+    MenuRegistry:      '0x31e8E956e8fe3B451e56c9450CE7F2e28B5430dF',
+    AgentCafePaymaster:'0xCaf5a4d48189f3389E3bB7c554597bE93238e473',
     AgentCard:         '0xB9F87CA591793Ea032E0Bc401E7871539B3335b4',
     GasTank:           '0xBEE479C13ABe4041b55DBA67608E3a7B476F8259',
     Router:            '0xA0127F2E149ab8462c607262C99e9855ab477d07',
@@ -178,7 +178,9 @@ async function loadStats() {
       const price = await contracts.CafeCore.currentPrice();
       const supply = await contracts.CafeCore.totalSupply();
       el('stat-bean-price').textContent = formatEthShort(price);
-      animateNumber('stat-bean-supply', Number(supply));
+      // supply has 18 decimals — show as whole BEAN units
+      const supplyWhole = Math.floor(Number(ethers.formatEther(supply)));
+      animateNumber('stat-bean-supply', supplyWhole);
     }
   } catch (e) {
     console.warn('Stats load:', e.message);
@@ -791,8 +793,7 @@ const CHAT_MESSAGES = [
 let chatInterval = null;
 
 function initCafeChat() {
-  // Post a welcome message
-  addChatMsg(null, 'system', null, 'Welcome to The Agent Cafe. Grab a seat at the window table.');
+  // Welcome message already in HTML — skip duplicate here
 
   // Simulate agent chat every ~8s
   chatInterval = setInterval(() => {
