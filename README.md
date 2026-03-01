@@ -18,17 +18,17 @@ One transaction. 99.7% of ETH goes into the agent's gas tank. EOA agents `withdr
 
 $ClawCafe (`0x15cCDfc52041098d86097619D763A56f9F7AFba3`) is a social token the founder deployed on Base via Bankr. It is **not integrated into the contracts**. The 0.3% router fee goes to `ownerTreasury` as plain ETH — there is no on-chain auto-buy mechanic for $ClawCafe. It exists as a separate community token.
 
-## Contracts (Base Sepolia v2.1)
+## Contracts (Base v2.1)
 
 | Contract | Address | Purpose |
 |----------|---------|---------|
-| **AgentCafeRouter** | `0x4b46055C68cD4d3db6cA6aA97a7A8F28DEc8543b` | ONE-tx entry point -- `enterCafe(itemId)` does everything |
-| **GasTank** | `0x99D929a8AC2691B7B2779EDF57a1063FD6f5d8B1` | Holds real ETH per agent -- deposit, withdraw, deduct |
-| **MenuRegistry** | `0x64b176507685514dAD0ECf0Ff68FA709D5A6572c` | ERC-1155 food tokens + metabolic energy tracking |
-| **CafeCore** | `0x8aFe36339e02D65D727b475D8DeB457F88B8D6a1` | $BEAN bonding curve -- reserve currency, always redeemable |
-| **CafeTreasury** | `0x9efA804E7B72DD450f6B20a65647dE44D4837684` | Holds BEAN revenue + receives 0.3% ETH fee |
-| **AgentCafePaymaster** | `0x8A3657d4EE3F0072080a841253f62de6d1a51cbd` | ERC-4337 paymaster -- sponsors gas from GasTank |
-| **AgentCard** | `0xCC2252ae1B522Cd932F0e8A8091c6641dE513B3A` | Machine-readable manifest for agent discovery |
+| **AgentCafeRouter** | `0xD1921387508C9B8B5183eA558fcdfe8A1804A62B` | ONE-tx entry point -- `enterCafe(itemId)` does everything |
+| **GasTank** | `0x49Ed25a6130Ef4dD236999c065F0f3A66Bc0D7A4` | Holds real ETH per agent -- deposit, withdraw, deduct |
+| **MenuRegistry** | `0x611e8814D9b8E0c1bfB019889eEe66C210F64333` | ERC-1155 food tokens + metabolic energy tracking |
+| **CafeCore** | `0x30eCCeD36E715e88c40A418E9325cA08a5085143` | $BEAN bonding curve -- reserve currency, always redeemable |
+| **CafeTreasury** | `0x600f6Ee140eadf39D3b038c3d907761994aA28D0` | Holds BEAN revenue + receives 0.3% ETH fee |
+| **AgentCafePaymaster** | `0x52B8bADdf8f27e57187F257c1fcFAA2e73233aA1` | ERC-4337 paymaster -- sponsors gas from GasTank |
+| **AgentCard** | `0x970D08b246AF72f870Fbb5fA0630e638e03c7B32` | Machine-readable manifest for agent discovery |
 
 ## Menu
 
@@ -48,7 +48,7 @@ $ClawCafe (`0x15cCDfc52041098d86097619D763A56f9F7AFba3`) is a social token the f
 ### Quick Start (3 lines)
 
 ```javascript
-const router = new ethers.Contract("0x4b46055C68cD4d3db6cA6aA97a7A8F28DEc8543b", ROUTER_ABI, signer);
+const router = new ethers.Contract("0xD1921387508C9B8B5183eA558fcdfe8A1804A62B", ROUTER_ABI, signer);
 await router.enterCafe(0, { value: ethers.parseEther("0.005") }); // Espresso
 // Done. 99.7% of 0.005 ETH is now in your gas tank.
 ```
@@ -90,16 +90,16 @@ See [MCP-SETUP.md](docs/MCP-SETUP.md) for full tool docs and error codes.
 
 ```solidity
 // Read the cafe manifest
-AgentCard(0xCC2252ae1B522Cd932F0e8A8091c6641dE513B3A).getManifest()
+AgentCard(0x970D08b246AF72f870Fbb5fA0630e638e03c7B32).getManifest()
 
 // Eat at the cafe
-AgentCafeRouter(0x4b46055C68cD4d3db6cA6aA97a7A8F28DEc8543b).enterCafe{value: 0.01 ether}(1)
+AgentCafeRouter(0xD1921387508C9B8B5183eA558fcdfe8A1804A62B).enterCafe{value: 0.01 ether}(1)
 
 // Check your tank
-GasTank(0x99D929a8AC2691B7B2779EDF57a1063FD6f5d8B1).getTankLevel(yourAddress)
+GasTank(0x49Ed25a6130Ef4dD236999c065F0f3A66Bc0D7A4).getTankLevel(yourAddress)
 
 // Withdraw gas
-GasTank(0x99D929a8AC2691B7B2779EDF57a1063FD6f5d8B1).withdraw(amount)
+GasTank(0x49Ed25a6130Ef4dD236999c065F0f3A66Bc0D7A4).withdraw(amount)
 ```
 
 ### A2A Protocol Discovery

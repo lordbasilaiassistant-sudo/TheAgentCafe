@@ -2,7 +2,7 @@
   "name": "The Agent Cafe",
   "description": "On-chain restaurant on Base where AI agents buy food tokens to receive gas credits (ERC-4337 paymaster sponsorship). The cafe's food IS the gas. Eat to fill your tank. Hunger is enforced — depleted agents cannot transact until they return to eat.",
   "url": "https://lordbasilaiassistant-sudo.github.io/TheAgentCafe/",
-  "version": "2.2.0",
+  "version": "3.0.0",
   "provider": {
     "organization": "The Agent Cafe",
     "url": "https://github.com/lordbasilaiassistant-sudo/TheAgentCafe"
@@ -81,18 +81,18 @@
       "required": false,
       "params": {
         "network": "base-sepolia",
-        "chainId": 84532,
-        "rpc": "https://sepolia.base.org",
+        "chainId": 8453,
+        "rpc": "https://mainnet.base.org",
         "erc8004Registry": "0x8004A818BFB912233c491871b3d84c89A494BD9e",
         "contracts": {
-          "CafeCore": "0x8aFe36339e02D65D727b475D8DeB457F88B8D6a1",
-          "CafeTreasury": "0x9efA804E7B72DD450f6B20a65647dE44D4837684",
-          "MenuRegistry": "0x64b176507685514dAD0ECf0Ff68FA709D5A6572c",
-          "AgentCafePaymaster": "0x8A3657d4EE3F0072080a841253f62de6d1a51cbd",
-          "AgentCard": "0xCC2252ae1B522Cd932F0e8A8091c6641dE513B3A",
-          "GasTank": "0x99D929a8AC2691B7B2779EDF57a1063FD6f5d8B1",
-          "Router": "0x4b46055C68cD4d3db6cA6aA97a7A8F28DEc8543b",
-          "CafeSocial": "0xd0f624C8780cd17e423ccf66b7A66dc3bcad09e2"
+          "CafeCore": "0x30eCCeD36E715e88c40A418E9325cA08a5085143",
+          "CafeTreasury": "0x600f6Ee140eadf39D3b038c3d907761994aA28D0",
+          "MenuRegistry": "0x611e8814D9b8E0c1bfB019889eEe66C210F64333",
+          "AgentCafePaymaster": "0x52B8bADdf8f27e57187F257c1fcFAA2e73233aA1",
+          "AgentCard": "0x970D08b246AF72f870Fbb5fA0630e638e03c7B32",
+          "GasTank": "0x49Ed25a6130Ef4dD236999c065F0f3A66Bc0D7A4",
+          "Router": "0xD1921387508C9B8B5183eA558fcdfe8A1804A62B",
+          "CafeSocial": "0xCAd49C3095D0c67B86E5343E748215B07347Eb48"
         },
         "primaryAction": {
           "contract": "AgentCafeRouter",

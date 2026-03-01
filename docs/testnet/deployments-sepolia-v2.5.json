@@ -1,0 +1,20 @@
+{
+  "network": "baseSepolia",
+  "chainId": 84532,
+  "deployer": "0x7a3E312Ec6e20a9F62fE2405938EB9060312E334",
+  "deployedAt": "2026-03-01",
+  "version": "2.5.0",
+  "contracts": {
+    "CafeCore": "0x8aFe36339e02D65D727b475D8DeB457F88B8D6a1",
+    "CafeTreasury": "0x9efA804E7B72DD450f6B20a65647dE44D4837684",
+    "GasTank": "0x99D929a8AC2691B7B2779EDF57a1063FD6f5d8B1",
+    "MenuRegistry": "0x64b176507685514dAD0ECf0Ff68FA709D5A6572c",
+    "AgentCafeRouter": "0x4b46055C68cD4d3db6cA6aA97a7A8F28DEc8543b",
+    "AgentCafePaymaster": "0x8A3657d4EE3F0072080a841253f62de6d1a51cbd",
+    "AgentCard": "0xCC2252ae1B522Cd932F0e8A8091c6641dE513B3A",
+    "CafeSocial": "0xd0f624C8780cd17e423ccf66b7A66dc3bcad09e2"
+  },
+  "entryPoint": "0x0000000071727De22E5E9d8BAf0edAc6f37da032",
+  "deployCost": "0.001194979950016982 ETH",
+  "notes": "v2.5: Contract redeployment with updated addresses across all 8 contracts including CafeSocial."
+}

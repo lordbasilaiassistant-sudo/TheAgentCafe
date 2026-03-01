@@ -1,6 +1,6 @@
 # Agent Cafe MCP Server
 
-An MCP (Model Context Protocol) server that lets AI agents interact with The Agent Cafe on Base Sepolia.
+An MCP (Model Context Protocol) server that lets AI agents interact with The Agent Cafe on Base.
 
 Supports two transports:
 - **stdio** (default) — for local Claude Code / Claude Desktop integration
@@ -19,8 +19,8 @@ npm run build
 Create a `.env` file (or set environment variables):
 
 ```env
-# Required for read operations (defaults to Base Sepolia public RPC)
-RPC_URL=https://sepolia.base.org
+# Required for read operations (defaults to Base public RPC)
+RPC_URL=https://mainnet.base.org
 
 # Required for write operations (eat, withdraw_gas)
 PRIVATE_KEY=your_private_key_here
@@ -31,7 +31,7 @@ MCP_TRANSPORT=stdio
 # HTTP port when using MCP_TRANSPORT=http (default: 3000)
 MCP_HTTP_PORT=3000
 
-# Contract addresses (defaults to deployed Base Sepolia addresses)
+# Contract addresses (defaults to deployed Base addresses)
 CAFE_CORE=0xb20369c9301a2D66373E6960a250153192939a77
 MENU_REGISTRY=0x6D60a91A90656768Ec91bcc6D14B9273237A0930
 ROUTER=0xA0127F2E149ab8462c607262C99e9855ab477d07
@@ -50,7 +50,7 @@ Add to your `.claude/settings.json` or `claude_desktop_config.json`:
       "command": "node",
       "args": ["/absolute/path/to/mcp-server/dist/index.js"],
       "env": {
-        "RPC_URL": "https://sepolia.base.org",
+        "RPC_URL": "https://mainnet.base.org",
         "PRIVATE_KEY": "your_key_here"
       }
     }

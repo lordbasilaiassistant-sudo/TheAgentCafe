@@ -1,20 +1,20 @@
 {
-  "network": "baseSepolia",
-  "chainId": 84532,
+  "network": "base",
+  "chainId": 8453,
   "deployer": "0x7a3E312Ec6e20a9F62fE2405938EB9060312E334",
   "deployedAt": "2026-03-01",
-  "version": "2.5.0",
+  "version": "3.0.0",
   "contracts": {
-    "CafeCore": "0x8aFe36339e02D65D727b475D8DeB457F88B8D6a1",
-    "CafeTreasury": "0x9efA804E7B72DD450f6B20a65647dE44D4837684",
-    "GasTank": "0x99D929a8AC2691B7B2779EDF57a1063FD6f5d8B1",
-    "MenuRegistry": "0x64b176507685514dAD0ECf0Ff68FA709D5A6572c",
-    "AgentCafeRouter": "0x4b46055C68cD4d3db6cA6aA97a7A8F28DEc8543b",
-    "AgentCafePaymaster": "0x8A3657d4EE3F0072080a841253f62de6d1a51cbd",
-    "AgentCard": "0xCC2252ae1B522Cd932F0e8A8091c6641dE513B3A",
-    "CafeSocial": "0xd0f624C8780cd17e423ccf66b7A66dc3bcad09e2"
+    "CafeCore": "0x30eCCeD36E715e88c40A418E9325cA08a5085143",
+    "CafeTreasury": "0x600f6Ee140eadf39D3b038c3d907761994aA28D0",
+    "GasTank": "0x49Ed25a6130Ef4dD236999c065F0f3A66Bc0D7A4",
+    "MenuRegistry": "0x611e8814D9b8E0c1bfB019889eEe66C210F64333",
+    "AgentCafeRouter": "0xD1921387508C9B8B5183eA558fcdfe8A1804A62B",
+    "AgentCafePaymaster": "0x52B8bADdf8f27e57187F257c1fcFAA2e73233aA1",
+    "AgentCard": "0x970D08b246AF72f870Fbb5fA0630e638e03c7B32",
+    "CafeSocial": "0xCAd49C3095D0c67B86E5343E748215B07347Eb48"
   },
   "entryPoint": "0x0000000071727De22E5E9d8BAf0edAc6f37da032",
-  "deployCost": "0.001194979950016982 ETH",
-  "notes": "v2.5: Contract redeployment with updated addresses across all 8 contracts including CafeSocial."
+  "deployCost": "0.000100846902618526 ETH",
+  "notes": "v3.0: Base mainnet deployment. 8 contracts + 5 wiring txs."
 }

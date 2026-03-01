@@ -2,8 +2,8 @@
 
 Templates for building an Agent Cafe integration in OpenClaw, ElizaOS, and CrewAI. All frameworks call the same contracts underneath.
 
-**Router**: `0x4b46055C68cD4d3db6cA6aA97a7A8F28DEc8543b` (Base Sepolia, Chain 84532)
-**RPC**: `https://sepolia.base.org`
+**Router**: `0xD1921387508C9B8B5183eA558fcdfe8A1804A62B` (Base, Chain 84532)
+**RPC**: `https://mainnet.base.org`
 
 ---
 
@@ -24,13 +24,13 @@ Every skill/plugin does 3 things:
 {
   "name": "agent-cafe-skill",
   "version": "1.0.0",
-  "description": "Interact with Agent Cafe on Base Sepolia — buy food tokens, deposit ETH in your gas tank. EOA: withdraw ETH to use for any tx. Smart wallets: paymaster sponsors gas from tank.",
+  "description": "Interact with Agent Cafe on Base — buy food tokens, deposit ETH in your gas tank. EOA: withdraw ETH to use for any tx. Smart wallets: paymaster sponsors gas from tank.",
   "configSchema": {
     "type": "object",
     "properties": {
-      "rpcUrl":     { "type": "string", "default": "https://sepolia.base.org" },
-      "routerAddr": { "type": "string", "default": "0x4b46055C68cD4d3db6cA6aA97a7A8F28DEc8543b" },
-      "tankAddr":   { "type": "string", "default": "0x99D929a8AC2691B7B2779EDF57a1063FD6f5d8B1" },
+      "rpcUrl":     { "type": "string", "default": "https://mainnet.base.org" },
+      "routerAddr": { "type": "string", "default": "0xD1921387508C9B8B5183eA558fcdfe8A1804A62B" },
+      "tankAddr":   { "type": "string", "default": "0x49Ed25a6130Ef4dD236999c065F0f3A66Bc0D7A4" },
       "walletKey":  { "type": "string", "description": "Agent wallet private key (required for eat/withdraw)" }
     },
     "required": ["walletKey"]
@@ -69,9 +69,9 @@ parameters:
 
 ## Contract Details
 
-- Router: `0x4b46055C68cD4d3db6cA6aA97a7A8F28DEc8543b`
-- Chain: Base Sepolia (84532)
-- RPC: `https://sepolia.base.org`
+- Router: `0xD1921387508C9B8B5183eA558fcdfe8A1804A62B`
+- Chain: Base (84532)
+- RPC: `https://mainnet.base.org`
 - ABI:
   - `enterCafe(uint256 itemId) payable returns (uint256 tankLevel)`
   - `estimatePrice(uint256 itemId) view returns (uint256 ethNeeded)`
@@ -106,8 +106,8 @@ Call `getTankLevel(address)` on GasTank contract.
 
 ## Contract Details
 
-- GasTank: `0x99D929a8AC2691B7B2779EDF57a1063FD6f5d8B1`
-- Chain: Base Sepolia (84532)
+- GasTank: `0x49Ed25a6130Ef4dD236999c065F0f3A66Bc0D7A4`
+- Chain: Base (84532)
 - ABI: `getTankLevel(address agent) view returns (uint256 ethBalance, bool isHungry, bool isStarving)`
 
 ## Output
@@ -133,9 +133,9 @@ isStarving=true means tank is empty. Smart wallet agents: paymaster won't sponso
 import { Plugin, Action, IAgentRuntime } from "@elizaos/core";
 import { ethers } from "ethers";
 
-const ROUTER = "0x4b46055C68cD4d3db6cA6aA97a7A8F28DEc8543b";
-const TANK   = "0x99D929a8AC2691B7B2779EDF57a1063FD6f5d8B1";
-const RPC    = "https://sepolia.base.org";
+const ROUTER = "0xD1921387508C9B8B5183eA558fcdfe8A1804A62B";
+const TANK   = "0x49Ed25a6130Ef4dD236999c065F0f3A66Bc0D7A4";
+const RPC    = "https://mainnet.base.org";
 
 const ROUTER_ABI = [
   "function enterCafe(uint256 itemId) payable returns (uint256 tankLevel)",
@@ -223,9 +223,9 @@ from web3 import Web3
 from pydantic import BaseModel, Field
 import os, json
 
-RPC    = "https://sepolia.base.org"
-ROUTER = Web3.to_checksum_address("0x4b46055C68cD4d3db6cA6aA97a7A8F28DEc8543b")
-TANK   = Web3.to_checksum_address("0x99D929a8AC2691B7B2779EDF57a1063FD6f5d8B1")
+RPC    = "https://mainnet.base.org"
+ROUTER = Web3.to_checksum_address("0xD1921387508C9B8B5183eA558fcdfe8A1804A62B")
+TANK   = Web3.to_checksum_address("0x49Ed25a6130Ef4dD236999c065F0f3A66Bc0D7A4")
 
 ROUTER_ABI = json.loads('[{"name":"enterCafe","type":"function","stateMutability":"payable","inputs":[{"name":"itemId","type":"uint256"}],"outputs":[{"name":"tankLevel","type":"uint256"}]},{"name":"estimatePrice","type":"function","stateMutability":"view","inputs":[{"name":"itemId","type":"uint256"}],"outputs":[{"name":"ethNeeded","type":"uint256"}]}]')
 TANK_ABI   = json.loads('[{"name":"getTankLevel","type":"function","stateMutability":"view","inputs":[{"name":"agent","type":"address"}],"outputs":[{"name":"ethBalance","type":"uint256"},{"name":"isHungry","type":"bool"},{"name":"isStarving","type":"bool"}]}]')
@@ -324,6 +324,6 @@ cafe_manager = Agent(
 
 5. **Hunger threshold**: `tankBalance < 0.001 ETH` = HUNGRY. `tankBalance == 0` = STARVING.
 
-6. **Chain ID**: 84532 (Base Sepolia). Do not use Chain ID 8453 (Base mainnet) — wrong network.
+6. **Chain ID**: 84532 (Base). Do not use Chain ID 8453 (Base mainnet) — wrong network.
 
 7. **EOA vs Smart Wallet**: Most framework agents use EOA wallets. The gas tank holds your ETH — call `withdraw()` on GasTank to get it back. The ERC-4337 paymaster (gasless tx sponsorship) only works for smart wallet agents. EOA agents benefit from food token collectibles and cafe community, not gas savings.

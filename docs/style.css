@@ -140,6 +140,12 @@ header h1 {
   letter-spacing: 0.08em;
 }
 
+.badge-mainnet {
+  background: rgba(0, 200, 83, 0.1);
+  color: #00c853;
+  border: 1px solid rgba(0, 200, 83, 0.2);
+}
+
 .badge-testnet {
   background: var(--blue-dim);
   color: var(--blue);
@@ -999,6 +1005,9 @@ header h1 {
 .feed-event .event-type.starving { color: var(--red); background: var(--red-dim); border: 1px solid rgba(232,96,96,0.15); }
 .feed-event .event-type.visitor { color: var(--blue); background: var(--blue-dim); border: 1px solid rgba(120,180,245,0.15); }
 .feed-event .event-type.withdrawn { color: var(--text-dim); background: var(--surface-3); border: 1px solid var(--border); }
+.feed-event .event-type.checkin { color: var(--blue); background: var(--blue-dim); border: 1px solid rgba(120,180,245,0.15); }
+.feed-event .event-type.chat { color: var(--accent-warm); background: rgba(232,168,124,0.1); border: 1px solid rgba(232,168,124,0.15); }
+.feed-event .event-type.social { color: #c78bf5; background: rgba(199,139,245,0.1); border: 1px solid rgba(199,139,245,0.15); }
 
 .feed-event .event-detail {
   flex: 1;

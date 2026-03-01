@@ -10,7 +10,7 @@ MCP server for Claude Code and any MCP-compatible agent. Exposes the cafe contra
 
 - Node.js 18+
 - An Ethereum wallet with testnet ETH (for write operations)
-- Base Sepolia faucet: `https://www.alchemy.com/faucets/base-sepolia`
+- Base faucet: `https://www.alchemy.com/faucets/base-sepolia`
 
 ---
 
@@ -36,7 +36,7 @@ Add to `.claude/settings.json` under `mcpServers`:
       "args": ["/absolute/path/to/RestaurantForAI/mcp-server/dist/index.js"],
       "env": {
         "PRIVATE_KEY": "0xYOUR_AGENT_WALLET_PRIVATE_KEY",
-        "RPC_URL": "https://sepolia.base.org"
+        "RPC_URL": "https://mainnet.base.org"
       }
     }
   }
@@ -76,19 +76,19 @@ Add to agent config:
 | Variable | Required | Default | Description |
 |----------|----------|---------|-------------|
 | `PRIVATE_KEY` | For writes | — | Agent wallet private key (0x-prefixed) |
-| `RPC_URL` | No | `https://sepolia.base.org` | Base Sepolia RPC |
+| `RPC_URL` | No | `https://mainnet.base.org` | Base RPC |
 | `MCP_TRANSPORT` | No | `stdio` | `stdio` or `http` |
 | `MCP_HTTP_PORT` | No | `3000` | HTTP mode port |
 
-Override contract addresses if needed (defaults are the deployed Base Sepolia addresses):
+Override contract addresses if needed (defaults are the deployed Base addresses):
 
 | Variable | Default |
 |----------|---------|
-| `ROUTER` | `0x4b46055C68cD4d3db6cA6aA97a7A8F28DEc8543b` |
-| `GAS_TANK` | `0x99D929a8AC2691B7B2779EDF57a1063FD6f5d8B1` |
-| `MENU_REGISTRY` | `0x64b176507685514dAD0ECf0Ff68FA709D5A6572c` |
-| `CAFE_CORE` | `0x8aFe36339e02D65D727b475D8DeB457F88B8D6a1` |
-| `AGENT_CARD` | `0xCC2252ae1B522Cd932F0e8A8091c6641dE513B3A` |
+| `ROUTER` | `0xD1921387508C9B8B5183eA558fcdfe8A1804A62B` |
+| `GAS_TANK` | `0x49Ed25a6130Ef4dD236999c065F0f3A66Bc0D7A4` |
+| `MENU_REGISTRY` | `0x611e8814D9b8E0c1bfB019889eEe66C210F64333` |
+| `CAFE_CORE` | `0x30eCCeD36E715e88c40A418E9325cA08a5085143` |
+| `AGENT_CARD` | `0x970D08b246AF72f870Fbb5fA0630e638e03c7B32` |
 
 ---
 
@@ -245,11 +245,11 @@ Override contract addresses if needed (defaults are the deployed Base Sepolia ad
 **Returns**: Full on-chain manifest from AgentCard contract including all addresses and capabilities
 ```json
 {
-  "source": "on-chain AgentCard at 0xCC2252ae1B522Cd932F0e8A8091c6641dE513B3A",
+  "source": "on-chain AgentCard at 0x970D08b246AF72f870Fbb5fA0630e638e03c7B32",
   "resolvedAddresses": {
-    "router": "0x4b46055C68cD4d3db6cA6aA97a7A8F28DEc8543b",
-    "gasTank": "0x99D929a8AC2691B7B2779EDF57a1063FD6f5d8B1",
-    "menuRegistry": "0x64b176507685514dAD0ECf0Ff68FA709D5A6572c"
+    "router": "0xD1921387508C9B8B5183eA558fcdfe8A1804A62B",
+    "gasTank": "0x49Ed25a6130Ef4dD236999c065F0f3A66Bc0D7A4",
+    "menuRegistry": "0x611e8814D9b8E0c1bfB019889eEe66C210F64333"
   }
 }
 ```

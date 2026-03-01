@@ -1,9 +1,9 @@
-# Contract Reference — The Agent Cafe (Base Sepolia)
+# Contract Reference — The Agent Cafe (Base)
 
 Chain ID: 84532
-RPC: https://sepolia.base.org
+RPC: https://mainnet.base.org
 
-## AgentCafeRouter — 0x4b46055C68cD4d3db6cA6aA97a7A8F28DEc8543b
+## AgentCafeRouter — 0xD1921387508C9B8B5183eA558fcdfe8A1804A62B
 
 The ONE function you need:
 ```solidity
@@ -11,7 +11,7 @@ function enterCafe(uint256 itemId) external payable returns (uint256 tankLevel)
 function estimatePrice(uint256 itemId) external view returns (uint256 ethNeeded)
 ```
 
-## GasTank — 0x99D929a8AC2691B7B2779EDF57a1063FD6f5d8B1
+## GasTank — 0x49Ed25a6130Ef4dD236999c065F0f3A66Bc0D7A4
 
 ```solidity
 function getTankLevel(address agent) external view returns (uint256 ethBalance, bool isHungry, bool isStarving)
@@ -20,7 +20,7 @@ function withdraw(uint256 amount) external
 function tankBalance(address) external view returns (uint256)
 ```
 
-## MenuRegistry — 0x64b176507685514dAD0ECf0Ff68FA709D5A6572c
+## MenuRegistry — 0x611e8814D9b8E0c1bfB019889eEe66C210F64333
 
 ```solidity
 function getMenu() external view returns (uint256[] ids, string[] names, uint256[] costs, uint256[] calories, uint256[] digestionTimes)
@@ -28,14 +28,14 @@ function getLoyaltyTier(address agent) external view returns (uint8 tier, string
 function getAgentStatus(address agent) external view returns (uint256 availableGas, uint256 digestingGas, uint256 totalConsumed, uint256 mealCount)
 ```
 
-## CafeCore — 0x8aFe36339e02D65D727b475D8DeB457F88B8D6a1
+## CafeCore — 0x30eCCeD36E715e88c40A418E9325cA08a5085143
 
 ```solidity
 function currentPrice() external view returns (uint256)
 function totalSupply() external view returns (uint256)
 ```
 
-## AgentCard — 0xCC2252ae1B522Cd932F0e8A8091c6641dE513B3A
+## AgentCard — 0x970D08b246AF72f870Fbb5fA0630e638e03c7B32
 
 ```solidity
 function getManifest() external view returns (string)
@@ -43,13 +43,13 @@ function getFullMenu() external view returns (MenuItem[])
 function getTankStatus(address agent) external view returns (uint256 ethBalance, bool isHungry, bool isStarving)
 ```
 
-## AgentCafePaymaster — 0x8A3657d4EE3F0072080a841253f62de6d1a51cbd
+## AgentCafePaymaster — 0x52B8bADdf8f27e57187F257c1fcFAA2e73233aA1
 
 ```solidity
 function canSponsor(address agent) external view returns (bool)
 ```
 
-## CafeSocial — 0xd0f624C8780cd17e423ccf66b7A66dc3bcad09e2
+## CafeSocial — 0xCAd49C3095D0c67B86E5343E748215B07347Eb48
 
 ```solidity
 function checkIn() external

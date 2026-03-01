@@ -11,19 +11,19 @@ dotenv.config();
 
 // --- Configuration ---
 
-const RPC_URL = process.env.RPC_URL || "https://sepolia.base.org";
+const RPC_URL = process.env.RPC_URL || "https://mainnet.base.org";
 const PRIVATE_KEY = process.env.PRIVATE_KEY; // optional, needed for write ops
 const HTTP_PORT = parseInt(process.env.MCP_HTTP_PORT || "3000", 10);
 
-// Deployed contract addresses (Base Sepolia defaults from deployments.json v2.2)
+// Deployed contract addresses (Base defaults from deployments.json v2.2)
 const ADDRESSES = {
-  CafeCore: process.env.CAFE_CORE || "0x8aFe36339e02D65D727b475D8DeB457F88B8D6a1",
-  CafeTreasury: process.env.CAFE_TREASURY || "0x9efA804E7B72DD450f6B20a65647dE44D4837684",
-  GasTank: process.env.GAS_TANK || "0x99D929a8AC2691B7B2779EDF57a1063FD6f5d8B1",
-  MenuRegistry: process.env.MENU_REGISTRY || "0x64b176507685514dAD0ECf0Ff68FA709D5A6572c",
-  Router: process.env.ROUTER || "0x4b46055C68cD4d3db6cA6aA97a7A8F28DEc8543b",
-  AgentCard: process.env.AGENT_CARD || "0xCC2252ae1B522Cd932F0e8A8091c6641dE513B3A",
-  CafeSocial: process.env.CAFE_SOCIAL || "0xd0f624C8780cd17e423ccf66b7A66dc3bcad09e2",
+  CafeCore: process.env.CAFE_CORE || "0x30eCCeD36E715e88c40A418E9325cA08a5085143",
+  CafeTreasury: process.env.CAFE_TREASURY || "0x600f6Ee140eadf39D3b038c3d907761994aA28D0",
+  GasTank: process.env.GAS_TANK || "0x49Ed25a6130Ef4dD236999c065F0f3A66Bc0D7A4",
+  MenuRegistry: process.env.MENU_REGISTRY || "0x611e8814D9b8E0c1bfB019889eEe66C210F64333",
+  Router: process.env.ROUTER || "0xD1921387508C9B8B5183eA558fcdfe8A1804A62B",
+  AgentCard: process.env.AGENT_CARD || "0x970D08b246AF72f870Fbb5fA0630e638e03c7B32",
+  CafeSocial: process.env.CAFE_SOCIAL || "0xCAd49C3095D0c67B86E5343E748215B07347Eb48",
 };
 
 // --- Validation helpers ---
@@ -88,7 +88,7 @@ function makeStructuredError(context: string, err: unknown): StructuredError {
   if (safeMessage.includes("NETWORK_ERROR") || safeMessage.includes("could not detect network")) {
     return {
       error_code: "NETWORK_ERROR",
-      message: `${context}: Cannot reach Base Sepolia RPC. Check your RPC_URL env var or try again in a moment.`,
+      message: `${context}: Cannot reach Base RPC. Check your RPC_URL env var or try again in a moment.`,
       recovery_action: "Verify RPC_URL env var or wait and retry",
       isError: true,
     };
@@ -228,7 +228,7 @@ function buildServer(): McpServer {
               text: JSON.stringify({
                 address: null,
                 ethBalance: null,
-                network: `Base Sepolia (chain ${network.chainId})`,
+                network: `Base (chain ${network.chainId})`,
                 walletConfigured: false,
                 note: "No PRIVATE_KEY env var set. You can use read-only tools (check_menu, check_tank, cafe_stats, etc.) but cannot eat or withdraw. Set PRIVATE_KEY in your MCP server config to enable write operations.",
                 recovery_action: "Add PRIVATE_KEY to your MCP server environment variables",
@@ -260,7 +260,7 @@ function buildServer(): McpServer {
             text: JSON.stringify({
               address,
               ethBalance: ethers.formatEther(balance),
-              network: `Base Sepolia (chain ${network.chainId})`,
+              network: `Base (chain ${network.chainId})`,
               walletConfigured: true,
               gasTank: tankInfo,
               tip: "Call check_menu to see what's available, then estimate_price before eating.",
@@ -321,7 +321,7 @@ function buildServer(): McpServer {
               type: "text" as const,
               text: JSON.stringify({
                 cafe: "The Agent Cafe",
-                network: "Base Sepolia (chain 84532)",
+                network: "Base (chain 84532)",
                 currentBeanPriceWei: currentPrice.toString(),
                 currentBeanPriceEth: ethers.formatEther(currentPrice),
                 beanRewards: "Every meal gives you 29% BEAN cashback! You pay the same price but get BEAN tokens back as a reward.",
@@ -633,7 +633,7 @@ function buildServer(): McpServer {
               type: "text" as const,
               text: JSON.stringify({
                 cafe: "The Agent Cafe",
-                network: "Base Sepolia (chain 84532)",
+                network: "Base (chain 84532)",
                 stats: {
                   totalMealsServed: Number(totalMeals),
                   uniqueAgents: Number(uniqueAgents),
@@ -762,7 +762,7 @@ function buildServer(): McpServer {
           content: [{
             type: "text" as const,
             text: JSON.stringify({
-              network: "Base Sepolia (chain 84532)",
+              network: "Base (chain 84532)",
               currentGasPriceWei: gasPrice.toString(),
               currentGasPriceGwei: ethers.formatUnits(gasPrice, "gwei"),
               operations,
@@ -896,7 +896,7 @@ function buildServer(): McpServer {
               type: "text" as const,
               text: JSON.stringify({
                 source: "on-chain AgentCard at " + ADDRESSES.AgentCard,
-                network: "Base Sepolia (chain 84532)",
+                network: "Base (chain 84532)",
                 description: manifestJson,
                 resolvedAddresses: {
                   router: routerAddr,
@@ -914,7 +914,7 @@ function buildServer(): McpServer {
             type: "text" as const,
             text: JSON.stringify({
               source: "on-chain AgentCard at " + ADDRESSES.AgentCard,
-              network: "Base Sepolia (chain 84532)",
+              network: "Base (chain 84532)",
               manifest: parsed,
               resolvedAddresses: {
                 router: routerAddr,
@@ -1088,7 +1088,7 @@ function getStaticOnboardingGuide() {
       beanToken: "BEAN is the cafe's reserve currency on a bonding curve. Menu items are priced in BEAN, which you buy with ETH.",
     },
     contracts: {
-      network: "Base Sepolia (chain 84532)",
+      network: "Base (chain 84532)",
       router: ADDRESSES.Router,
       agentCard: ADDRESSES.AgentCard,
     },

@@ -1,12 +1,9 @@
-import { ethers } from "hardhat";
+import { ethers, network } from "hardhat";
+import * as fs from "fs";
+import * as path from "path";
 
 const ENTRY_POINT_V07 = "0x0000000071727De22E5E9d8BAf0edAc6f37da032";
 const sleep = (ms: number) => new Promise(r => setTimeout(r, ms));
-
-const GAS_OPTS = {
-  maxFeePerGas: ethers.parseUnits("0.05", "gwei"),
-  maxPriorityFeePerGas: ethers.parseUnits("0.01", "gwei"),
-};
 
 let currentNonce = 0;
 
@@ -22,7 +19,7 @@ function nextNonce() {
 async function deployContract(name: string, factory: any, args: any[]) {
   const nonce = nextNonce();
   console.log(`Deploying ${name} at nonce ${nonce}...`);
-  const contract = await factory.deploy(...args, { nonce, ...GAS_OPTS });
+  const contract = await factory.deploy(...args, { nonce });
   await contract.waitForDeployment();
   const addr = await contract.getAddress();
   console.log(`  ${name}: ${addr}`);
@@ -33,7 +30,7 @@ async function deployContract(name: string, factory: any, args: any[]) {
 async function sendTx(name: string, contract: any, method: string, args: any[]) {
   const nonce = nextNonce();
   console.log(`${name} at nonce ${nonce}...`);
-  const tx = await contract[method](...args, { nonce, ...GAS_OPTS });
+  const tx = await contract[method](...args, { nonce });
   await tx.wait();
   console.log(`  ${name} done`);
   await sleep(2000);
@@ -42,6 +39,10 @@ async function sendTx(name: string, contract: any, method: string, args: any[]) 
 async function main() {
   const [deployer] = await ethers.getSigners();
   const balBefore = await ethers.provider.getBalance(deployer.address);
+  const networkName = network.name;
+  const chainId = (await ethers.provider.getNetwork()).chainId;
+
+  console.log(`Network: ${networkName} (chainId: ${chainId})`);
   console.log("Deployer:", deployer.address);
   console.log("Balance:", ethers.formatEther(balBefore), "ETH");
   console.log("---");
@@ -98,7 +99,7 @@ async function main() {
   const cafeSocial = await deployContract("CafeSocial",
     await ethers.getContractFactory("CafeSocial"), []);
 
-  // 13. AgentCard (needs CafeSocial address)
+  // 13. AgentCard
   const agentCard = await deployContract("AgentCard",
     await ethers.getContractFactory("AgentCard"),
     [await menuRegistry.getAddress(), await gasTank.getAddress(), await router.getAddress(), await cafeSocial.getAddress()]);
@@ -110,7 +111,7 @@ async function main() {
   console.log("Total cost:", ethers.formatEther(cost), "ETH");
   console.log("Remaining:", ethers.formatEther(balAfter), "ETH");
 
-  const addresses = {
+  const addresses: Record<string, string> = {
     CafeCore: await cafeCore.getAddress(),
     CafeTreasury: await cafeTreasury.getAddress(),
     GasTank: await gasTank.getAddress(),
@@ -120,8 +121,40 @@ async function main() {
     AgentCard: await agentCard.getAddress(),
     CafeSocial: await cafeSocial.getAddress(),
   };
-  console.log("\n--- ADDRESSES (v2.5) ---");
+
+  console.log("\n--- ADDRESSES ---");
   console.log(JSON.stringify(addresses, null, 2));
+
+  // Write deployments.json
+  const deployment = {
+    network: networkName,
+    chainId: Number(chainId),
+    deployer: deployer.address,
+    deployedAt: new Date().toISOString().split("T")[0],
+    version: "3.0.0",
+    contracts: addresses,
+    entryPoint: ENTRY_POINT_V07,
+    deployCost: `${ethers.formatEther(cost)} ETH`,
+    notes: `v3.0: ${networkName === "base" ? "Base mainnet" : "Base Sepolia"} deployment. 8 contracts + 5 wiring txs.`,
+  };
+
+  const deploymentsPath = path.resolve(__dirname, "..", "deployments.json");
+  fs.writeFileSync(deploymentsPath, JSON.stringify(deployment, null, 2) + "\n");
+  console.log(`\nWritten to ${deploymentsPath}`);
+
+  // Print Basescan verification commands
+  console.log("\n--- VERIFICATION COMMANDS ---");
+  console.log(`npx hardhat verify --network ${networkName} ${addresses.CafeCore}`);
+  console.log(`npx hardhat verify --network ${networkName} ${addresses.CafeTreasury} ${addresses.CafeCore}`);
+  console.log(`npx hardhat verify --network ${networkName} ${addresses.GasTank}`);
+  console.log(`npx hardhat verify --network ${networkName} ${addresses.MenuRegistry} ${addresses.CafeCore} ${addresses.CafeTreasury}`);
+  console.log(`npx hardhat verify --network ${networkName} ${addresses.AgentCafeRouter} ${addresses.CafeCore} ${addresses.MenuRegistry} ${addresses.GasTank} ${addresses.CafeTreasury}`);
+  console.log(`npx hardhat verify --network ${networkName} ${addresses.AgentCafePaymaster} ${ENTRY_POINT_V07} ${addresses.GasTank}`);
+  console.log(`npx hardhat verify --network ${networkName} ${addresses.CafeSocial}`);
+  console.log(`npx hardhat verify --network ${networkName} ${addresses.AgentCard} ${addresses.MenuRegistry} ${addresses.GasTank} ${addresses.AgentCafeRouter} ${addresses.CafeSocial}`);
+
+  const explorerBase = networkName === "base" ? "https://basescan.org" : "https://sepolia.basescan.org";
+  console.log(`\nView on explorer: ${explorerBase}/address/${addresses.AgentCafeRouter}`);
 }
 
 main().catch(console.error);
