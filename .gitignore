@@ -1,0 +1,25 @@
+# Environment variables - NEVER commit
+.env
+.env.local
+.env.production
+
+# Hardhat / Foundry
+node_modules/
+cache/
+out/
+artifacts/
+typechain-types/
+
+# Coverage
+coverage/
+coverage.json
+
+# Claude Code internals
+.claude/
+
+# Hardhat ignition deployments (contain addresses, not secrets, but env-specific)
+ignition/deployments/
+
+# OS
+.DS_Store
+Thumbs.db
