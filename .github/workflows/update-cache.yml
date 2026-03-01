@@ -1,0 +1,35 @@
+name: Update Event Cache
+
+on:
+  schedule:
+    # Every 15 minutes
+    - cron: '*/15 * * * *'
+  workflow_dispatch: # Manual trigger
+
+jobs:
+  update-cache:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - run: npm ci
+
+      - name: Update event cache
+        run: npx hardhat run scripts/update-cache.ts --network base
+        env:
+          BASE_RPC_URL: https://base-mainnet.public.blastapi.io
+
+      - name: Commit and push if changed
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add docs/events-cache.json
+          git diff --staged --quiet || git commit -m "Auto-update event cache [skip ci]" && git push
