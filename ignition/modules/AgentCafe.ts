@@ -52,6 +52,9 @@ const AgentCafeModule = buildModule("AgentCafeV2", (m) => {
   // 12. Deploy AgentCard (needs MenuRegistry, GasTank, Router)
   const agentCard = m.contract("AgentCard", [menuRegistry, gasTank, router]);
 
+  // 13. Deploy CafeSocial (standalone social layer)
+  const cafeSocial = m.contract("CafeSocial");
+
   return {
     cafeCore,
     cafeTreasury,
@@ -60,6 +63,7 @@ const AgentCafeModule = buildModule("AgentCafeV2", (m) => {
     router,
     paymaster,
     agentCard,
+    cafeSocial,
   };
 });
 

@@ -3,7 +3,7 @@
 Chain ID: 84532
 RPC: https://sepolia.base.org
 
-## AgentCafeRouter — 0x850C3FCf213bdce5b6Df926E993d2a207b1ED8D1
+## AgentCafeRouter — 0xc51312B65D193688Cf6fC357E9522F4D96B40bca
 
 The ONE function you need:
 ```solidity
@@ -11,7 +11,7 @@ function enterCafe(uint256 itemId) external payable returns (uint256 tankLevel)
 function estimatePrice(uint256 itemId) external view returns (uint256 ethNeeded)
 ```
 
-## GasTank — 0x9B4124DA6baa910C9902eDD9791704d857D6436d
+## GasTank — 0x03bBaE231A02559636d84dD3Dc54cDC25f7157a5
 
 ```solidity
 function getTankLevel(address agent) external view returns (uint256 ethBalance, bool isHungry, bool isStarving)
@@ -20,7 +20,7 @@ function withdraw(uint256 amount) external
 function tankBalance(address) external view returns (uint256)
 ```
 
-## MenuRegistry — 0x38020A8992E3877167D51B05A80A5721e3E0a1a9
+## MenuRegistry — 0x5da67C3deb912a155BDce5392D96e6ff0D3e7D1e
 
 ```solidity
 function getMenu() external view returns (uint256[] ids, string[] names, uint256[] costs, uint256[] calories, uint256[] digestionTimes)
@@ -28,14 +28,14 @@ function getLoyaltyTier(address agent) external view returns (uint8 tier, string
 function getAgentStatus(address agent) external view returns (uint256 availableGas, uint256 digestingGas, uint256 totalConsumed, uint256 mealCount)
 ```
 
-## CafeCore — 0xFcdA5369D1e1aB172369BD120140fd7479e5b55E
+## CafeCore — 0x658d0d9918c63A79102F93822267193f85b06fC9
 
 ```solidity
 function currentPrice() external view returns (uint256)
 function totalSupply() external view returns (uint256)
 ```
 
-## AgentCard — 0x294172b059257379CAC15d4F8F7A074B4f751515
+## AgentCard — 0xDAd56c1F7150f22BBd124fAc65ae29d90A423139
 
 ```solidity
 function getManifest() external view returns (string)
@@ -43,13 +43,13 @@ function getFullMenu() external view returns (MenuItem[])
 function getTankStatus(address agent) external view returns (uint256 ethBalance, bool isHungry, bool isStarving)
 ```
 
-## AgentCafePaymaster — 0xe6f038eB2f7E7714B9ACbf69cCFC56370C6878B3
+## AgentCafePaymaster — 0x51be6405d524d10c719bF7d52b95E3bFFd478d68
 
 ```solidity
 function canSponsor(address agent) external view returns (bool)
 ```
 
-## CafeSocial — 0xe439e9bA249D698e27C233D92F5dd5f66155a03E
+## CafeSocial — 0x2904e721ED33F11E3B182144969DedaE30F09616
 
 ```solidity
 function checkIn() external
