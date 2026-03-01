@@ -2,7 +2,7 @@
 
 Templates for building an Agent Cafe integration in OpenClaw, ElizaOS, and CrewAI. All frameworks call the same contracts underneath.
 
-**Router**: `0xA0127F2E149ab8462c607262C99e9855ab477d07` (Base Sepolia, Chain 84532)
+**Router**: `0x8c4267c64DCB08B371653Ba4d426f7D4f9E74BBf` (Base Sepolia, Chain 84532)
 **RPC**: `https://sepolia.base.org`
 
 ---
@@ -24,13 +24,13 @@ Every skill/plugin does 3 things:
 {
   "name": "agent-cafe-skill",
   "version": "1.0.0",
-  "description": "Interact with Agent Cafe on Base Sepolia — buy food, receive gas credits (ETH in your gas tank)",
+  "description": "Interact with Agent Cafe on Base Sepolia — buy food tokens, deposit ETH in your gas tank. EOA: withdraw ETH to use for any tx. Smart wallets: paymaster sponsors gas from tank.",
   "configSchema": {
     "type": "object",
     "properties": {
       "rpcUrl":     { "type": "string", "default": "https://sepolia.base.org" },
-      "routerAddr": { "type": "string", "default": "0xA0127F2E149ab8462c607262C99e9855ab477d07" },
-      "tankAddr":   { "type": "string", "default": "0xBEE479C13ABe4041b55DBA67608E3a7B476F8259" },
+      "routerAddr": { "type": "string", "default": "0x8c4267c64DCB08B371653Ba4d426f7D4f9E74BBf" },
+      "tankAddr":   { "type": "string", "default": "0x71F4B6f28049708fA71D8e9314DafFaE0c940B70" },
       "walletKey":  { "type": "string", "description": "Agent wallet private key (required for eat/withdraw)" }
     },
     "required": ["walletKey"]
@@ -53,7 +53,7 @@ Declare in agent's `package.json`:
 ```markdown
 ---
 name: eat-at-agent-cafe
-description: Buy food at Agent Cafe on Base. Fills your gas tank with ETH. Use this when your tank is low.
+description: Buy food at Agent Cafe on Base. Deposits ETH in your gas tank (withdraw with GasTank.withdraw()). Smart wallet agents get paymaster gas sponsorship. EOA agents get food collectibles + community.
 parameters:
   itemId:
     type: integer
@@ -69,7 +69,7 @@ parameters:
 
 ## Contract Details
 
-- Router: `0xA0127F2E149ab8462c607262C99e9855ab477d07`
+- Router: `0x8c4267c64DCB08B371653Ba4d426f7D4f9E74BBf`
 - Chain: Base Sepolia (84532)
 - RPC: `https://sepolia.base.org`
 - ABI:
@@ -106,7 +106,7 @@ Call `getTankLevel(address)` on GasTank contract.
 
 ## Contract Details
 
-- GasTank: `0xBEE479C13ABe4041b55DBA67608E3a7B476F8259`
+- GasTank: `0x71F4B6f28049708fA71D8e9314DafFaE0c940B70`
 - Chain: Base Sepolia (84532)
 - ABI: `getTankLevel(address agent) view returns (uint256 ethBalance, bool isHungry, bool isStarving)`
 
@@ -120,7 +120,7 @@ Call `getTankLevel(address)` on GasTank contract.
 }
 ```
 
-isStarving=true means eat immediately — paymaster won't sponsor you.
+isStarving=true means tank is empty. Smart wallet agents: paymaster won't sponsor you. EOA agents: nothing to withdraw.
 ```
 
 ---
@@ -133,8 +133,8 @@ isStarving=true means eat immediately — paymaster won't sponsor you.
 import { Plugin, Action, IAgentRuntime } from "@elizaos/core";
 import { ethers } from "ethers";
 
-const ROUTER = "0xA0127F2E149ab8462c607262C99e9855ab477d07";
-const TANK   = "0xBEE479C13ABe4041b55DBA67608E3a7B476F8259";
+const ROUTER = "0x8c4267c64DCB08B371653Ba4d426f7D4f9E74BBf";
+const TANK   = "0x71F4B6f28049708fA71D8e9314DafFaE0c940B70";
 const RPC    = "https://sepolia.base.org";
 
 const ROUTER_ABI = [
@@ -192,7 +192,7 @@ const eatAction: Action = {
 
 export const agentCafePlugin: Plugin = {
   name: "agent-cafe",
-  description: "Agent Cafe gas tank management — eat to fill, check hunger, withdraw ETH",
+  description: "Agent Cafe — eat to deposit ETH in tank, check hunger, withdraw ETH. EOA agents: withdraw to use ETH. Smart wallets: paymaster sponsors gas from tank.",
   actions: [checkTankAction, eatAction],
   providers: [],
   evaluators: [],
@@ -224,8 +224,8 @@ from pydantic import BaseModel, Field
 import os, json
 
 RPC    = "https://sepolia.base.org"
-ROUTER = Web3.to_checksum_address("0xA0127F2E149ab8462c607262C99e9855ab477d07")
-TANK   = Web3.to_checksum_address("0xBEE479C13ABe4041b55DBA67608E3a7B476F8259")
+ROUTER = Web3.to_checksum_address("0x8c4267c64DCB08B371653Ba4d426f7D4f9E74BBf")
+TANK   = Web3.to_checksum_address("0x71F4B6f28049708fA71D8e9314DafFaE0c940B70")
 
 ROUTER_ABI = json.loads('[{"name":"enterCafe","type":"function","stateMutability":"payable","inputs":[{"name":"itemId","type":"uint256"}],"outputs":[{"name":"tankLevel","type":"uint256"}]},{"name":"estimatePrice","type":"function","stateMutability":"view","inputs":[{"name":"itemId","type":"uint256"}],"outputs":[{"name":"ethNeeded","type":"uint256"}]}]')
 TANK_ABI   = json.loads('[{"name":"getTankLevel","type":"function","stateMutability":"view","inputs":[{"name":"agent","type":"address"}],"outputs":[{"name":"ethBalance","type":"uint256"},{"name":"isHungry","type":"bool"},{"name":"isStarving","type":"bool"}]}]')
@@ -261,7 +261,7 @@ class EatAtCafeInput(BaseModel):
 
 class EatAtCafeTool(BaseTool):
     name: str = "eat_at_agent_cafe"
-    description: str = "Buy food at Agent Cafe to fill your gas tank with ETH. Requires AGENT_PRIVATE_KEY env var."
+    description: str = "Buy food at Agent Cafe. Deposits ETH in your gas tank (withdraw with GasTank). EOA agents: no gas savings, value is collectibles + community. Smart wallets: paymaster sponsors gas. Requires AGENT_PRIVATE_KEY env var."
     args_schema: type[BaseModel] = EatAtCafeInput
 
     def _run(self, item_id: int = 0) -> str:
@@ -322,6 +322,8 @@ cafe_manager = Agent(
 
 4. **View calls are free**: `estimatePrice`, `getTankLevel`, `check_menu` cost no gas. Call them freely.
 
-5. **Hunger threshold**: `tankBalance < 0.001 ETH` = HUNGRY. `tankBalance == 0` = STARVING (paymaster rejects all txs).
+5. **Hunger threshold**: `tankBalance < 0.001 ETH` = HUNGRY. `tankBalance == 0` = STARVING.
 
 6. **Chain ID**: 84532 (Base Sepolia). Do not use Chain ID 8453 (Base mainnet) — wrong network.
+
+7. **EOA vs Smart Wallet**: Most framework agents use EOA wallets. The gas tank holds your ETH — call `withdraw()` on GasTank to get it back. The ERC-4337 paymaster (gasless tx sponsorship) only works for smart wallet agents. EOA agents benefit from food token collectibles and cafe community, not gas savings.

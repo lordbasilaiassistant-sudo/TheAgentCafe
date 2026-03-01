@@ -469,11 +469,17 @@ describe("The Agent Cafe — Full Integration Test", function () {
         .connect(lifecycleAgent)
         .enterCafe(1, { value: ethers.parseEther("0.005") });
 
-      // 6. Tank should be refilled
+      // 6. Tank should be refilled (Latte has 50% digestion, so instant portion is lower)
+      //    Check total: tankBalance + digestingBalance should reflect full deposit
+      const tankAfter = await gasTank.tankBalance(lifecycleAgent.address);
+      const digestingAfter = await gasTank.digestingBalance(lifecycleAgent.address);
+      const totalAfter = tankAfter + digestingAfter;
+      expect(totalAfter).to.be.greaterThan(ethers.parseEther("0.002"));
+      // Not hungry because even instant portion exceeds threshold
       [tankBal, isHungry] = await gasTank.getTankLevel(
         lifecycleAgent.address
       );
-      expect(tankBal).to.be.greaterThan(ethers.parseEther("0.004"));
+      expect(tankBal).to.be.greaterThan(ethers.parseEther("0.001"));
       expect(isHungry).to.equal(false);
     });
   });

@@ -57,6 +57,7 @@ contract MenuRegistry is ERC1155, ReentrancyGuard, Ownable {
     event Digesting(address indexed agent, uint256 released, uint256 remaining);
     event NewVisitor(address indexed agent);
     event PaymasterSet(address indexed paymaster);
+    event LoyaltyTierUp(address indexed agent, uint8 newTier);
 
     constructor(address _bean, address _treasury) ERC1155("") Ownable(msg.sender) {
         bean = IERC20(_bean);
@@ -140,19 +141,17 @@ contract MenuRegistry is ERC1155, ReentrancyGuard, Ownable {
         if (item.digestionBlocks == 0) {
             state.availableGas += totalCalories;
         } else {
-            // NOTE: Eating a second time-released meal before the first finishes
-            // digesting will recalculate the rate for ALL remaining digesting gas
-            // using the new item's digestionBlocks. This is a design trade-off to
-            // avoid per-meal tracking (which would be significantly more gas-intensive).
             state.digestingGas += totalCalories;
             state.digestRatePerBlock = state.digestingGas / item.digestionBlocks;
             state.lastDigestBlock = block.number;
         }
 
         state.totalConsumed += totalCalories;
+        uint256 oldMealCount = state.mealCount;
         state.mealCount += quantity;
         totalMealsServed += quantity;
 
+        _checkTierUp(msg.sender, oldMealCount, state.mealCount);
         emit ItemConsumed(msg.sender, itemId, quantity, totalCalories);
     }
 
@@ -207,9 +206,11 @@ contract MenuRegistry is ERC1155, ReentrancyGuard, Ownable {
         }
 
         state.totalConsumed += totalCalories;
+        uint256 oldMealCount = state.mealCount;
         state.mealCount += quantity;
         totalMealsServed += quantity;
 
+        _checkTierUp(agent, oldMealCount, state.mealCount);
         emit ItemConsumed(agent, itemId, quantity, totalCalories);
     }
 
@@ -278,6 +279,67 @@ contract MenuRegistry is ERC1155, ReentrancyGuard, Ownable {
             emit Starving(agent);
         } else if (avail < 100_000) {
             emit Hungry(agent, avail);
+        }
+    }
+
+    // --- Loyalty Tier System ---
+    // Newcomer: 0-2 meals, 0 bps fee reduction
+    // Regular:  3-9 meals, 2 bps fee reduction (0.30% -> 0.28%)
+    // VIP:      10+ meals, 5 bps fee reduction (0.30% -> 0.25%)
+    uint8 public constant TIER_NEWCOMER = 0;
+    uint8 public constant TIER_REGULAR = 1;
+    uint8 public constant TIER_VIP = 2;
+
+    uint256 public constant REGULAR_THRESHOLD = 3;
+    uint256 public constant VIP_THRESHOLD = 10;
+
+    uint256 public constant REGULAR_FEE_REDUCTION_BPS = 2; // 0.02%
+    uint256 public constant VIP_FEE_REDUCTION_BPS = 5;     // 0.05%
+
+    /// @notice Get an agent's loyalty tier based on lifetime meal count
+    /// @return tier 0=Newcomer, 1=Regular, 2=VIP
+    /// @return tierName Human-readable tier name
+    /// @return mealCount Lifetime meals consumed
+    /// @return feeReductionBps Fee reduction in basis points (subtracted from router's 30 bps)
+    function getLoyaltyTier(address agent) external view returns (
+        uint8 tier,
+        string memory tierName,
+        uint256 mealCount,
+        uint256 feeReductionBps
+    ) {
+        mealCount = metabolism[agent].mealCount;
+        (tier, tierName, feeReductionBps) = _tierInfo(mealCount);
+    }
+
+    /// @notice Internal: compute tier info from meal count
+    function _tierInfo(uint256 mealCount) internal pure returns (
+        uint8 tier,
+        string memory tierName,
+        uint256 feeReductionBps
+    ) {
+        if (mealCount >= VIP_THRESHOLD) {
+            return (TIER_VIP, "VIP", VIP_FEE_REDUCTION_BPS);
+        } else if (mealCount >= REGULAR_THRESHOLD) {
+            return (TIER_REGULAR, "Regular", REGULAR_FEE_REDUCTION_BPS);
+        } else {
+            return (TIER_NEWCOMER, "Newcomer", 0);
+        }
+    }
+
+    /// @notice Get fee reduction in bps for an agent (called by Router)
+    function getFeeReductionBps(address agent) external view returns (uint256) {
+        uint256 mealCount = metabolism[agent].mealCount;
+        if (mealCount >= VIP_THRESHOLD) return VIP_FEE_REDUCTION_BPS;
+        if (mealCount >= REGULAR_THRESHOLD) return REGULAR_FEE_REDUCTION_BPS;
+        return 0;
+    }
+
+    /// @notice Check and emit tier-up event after a meal
+    function _checkTierUp(address agent, uint256 oldMealCount, uint256 newMealCount) internal {
+        if (oldMealCount < REGULAR_THRESHOLD && newMealCount >= REGULAR_THRESHOLD) {
+            emit LoyaltyTierUp(agent, TIER_REGULAR);
+        } else if (oldMealCount < VIP_THRESHOLD && newMealCount >= VIP_THRESHOLD) {
+            emit LoyaltyTierUp(agent, TIER_VIP);
         }
     }
 

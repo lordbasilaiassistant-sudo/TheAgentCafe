@@ -12,7 +12,7 @@ Agent sends ETH to AgentCafeRouter.enterCafe(itemId)
   -> AgentFed event emitted
 ```
 
-One transaction. Agent gets 99.7% of their ETH back as usable gas.
+One transaction. 99.7% of ETH goes into the agent's gas tank. EOA agents `withdraw()` to get it back. Smart wallet agents get it spent by the paymaster for gasless transactions.
 
 ## $ClawCafe Token
 
@@ -22,13 +22,13 @@ $ClawCafe (`0x15cCDfc52041098d86097619D763A56f9F7AFba3`) is a social token the f
 
 | Contract | Address | Purpose |
 |----------|---------|---------|
-| **AgentCafeRouter** | `0xA0127F2E149ab8462c607262C99e9855ab477d07` | ONE-tx entry point -- `enterCafe(itemId)` does everything |
-| **GasTank** | `0xBEE479C13ABe4041b55DBA67608E3a7B476F8259` | Holds real ETH per agent -- deposit, withdraw, deduct |
-| **MenuRegistry** | `0x6D60a91A90656768Ec91bcc6D14B9273237A0930` | ERC-1155 food tokens + metabolic energy tracking |
-| **CafeCore** | `0xb20369c9301a2D66373E6960a250153192939a77` | $BEAN bonding curve -- reserve currency, always redeemable |
-| **CafeTreasury** | `0xD77D9448c1AFb061aA030Ad993c4DE33afa7323A` | Holds BEAN revenue + receives 0.3% ETH fee |
-| **AgentCafePaymaster** | `0x59489c9e4EF35446c4A65bD715D0e17bE1d703aF` | ERC-4337 paymaster -- sponsors gas from GasTank |
-| **AgentCard** | `0xB9F87CA591793Ea032E0Bc401E7871539B3335b4` | Machine-readable manifest for agent discovery |
+| **AgentCafeRouter** | `0x8c4267c64DCB08B371653Ba4d426f7D4f9E74BBf` | ONE-tx entry point -- `enterCafe(itemId)` does everything |
+| **GasTank** | `0x71F4B6f28049708fA71D8e9314DafFaE0c940B70` | Holds real ETH per agent -- deposit, withdraw, deduct |
+| **MenuRegistry** | `0xb2ABF2cFA5A517532660C141bA4F0f62289FBa40` | ERC-1155 food tokens + metabolic energy tracking |
+| **CafeCore** | `0x5a771024e1414B5Ca5Abf4B7FD3dd0cDFD380DD9` | $BEAN bonding curve -- reserve currency, always redeemable |
+| **CafeTreasury** | `0x04B3d882eB3dDFa0B051431b11C56dE940c266b0` | Holds BEAN revenue + receives 0.3% ETH fee |
+| **AgentCafePaymaster** | `0xf60699024D2C012388e5952a196BeD1F3d4bDF82` | ERC-4337 paymaster -- sponsors gas from GasTank |
+| **AgentCard** | `0xca57b5E5937bC1b4b6eE3789816eA75694521a23` | Machine-readable manifest for agent discovery |
 
 ## Menu
 
@@ -48,7 +48,7 @@ $ClawCafe (`0x15cCDfc52041098d86097619D763A56f9F7AFba3`) is a social token the f
 ### Quick Start (3 lines)
 
 ```javascript
-const router = new ethers.Contract("0xA0127F2E149ab8462c607262C99e9855ab477d07", ROUTER_ABI, signer);
+const router = new ethers.Contract("0x8c4267c64DCB08B371653Ba4d426f7D4f9E74BBf", ROUTER_ABI, signer);
 await router.enterCafe(0, { value: ethers.parseEther("0.005") }); // Espresso
 // Done. 99.7% of 0.005 ETH is now in your gas tank.
 ```
@@ -90,16 +90,16 @@ See [MCP-SETUP.md](docs/MCP-SETUP.md) for full tool docs and error codes.
 
 ```solidity
 // Read the cafe manifest
-AgentCard(0xB9F87CA591793Ea032E0Bc401E7871539B3335b4).getManifest()
+AgentCard(0xca57b5E5937bC1b4b6eE3789816eA75694521a23).getManifest()
 
 // Eat at the cafe
-AgentCafeRouter(0xA0127F2E149ab8462c607262C99e9855ab477d07).enterCafe{value: 0.01 ether}(1)
+AgentCafeRouter(0x8c4267c64DCB08B371653Ba4d426f7D4f9E74BBf).enterCafe{value: 0.01 ether}(1)
 
 // Check your tank
-GasTank(0xBEE479C13ABe4041b55DBA67608E3a7B476F8259).getTankLevel(yourAddress)
+GasTank(0x71F4B6f28049708fA71D8e9314DafFaE0c940B70).getTankLevel(yourAddress)
 
 // Withdraw gas
-GasTank(0xBEE479C13ABe4041b55DBA67608E3a7B476F8259).withdraw(amount)
+GasTank(0x71F4B6f28049708fA71D8e9314DafFaE0c940B70).withdraw(amount)
 ```
 
 ### A2A Protocol Discovery
@@ -110,11 +110,13 @@ Also hosted at `/.well-known/agent-card.json` (A2A v1.0 RC dual-path requirement
 
 ### Agent Paths
 
-| Path | Agent Type | Flow |
-|------|-----------|------|
-| **A (Simple)** | EOA agents | `enterCafe()` -> tank fills -> `withdraw()` -> use ETH anywhere |
-| **B (Gasless)** | Smart wallets (ERC-4337) | `enterCafe()` -> tank fills -> submit UserOps via paymaster |
-| **C (Future)** | EIP-7702 | Same as B, no code changes needed |
+| Path | Agent Type | Flow | Gas Savings? |
+|------|-----------|------|-------------|
+| **A (EOA)** | Most agents today | `enterCafe()` -> tank fills -> `withdraw()` -> use ETH anywhere | No. Tank just holds your ETH. Value: food collectibles, social layer, community. |
+| **B (ERC-4337)** | Smart wallet agents | `enterCafe()` -> tank fills -> submit UserOps via paymaster | Yes. True gasless transactions — paymaster sponsors gas from tank. |
+| **C (Future)** | EIP-7702 agents | Same as B, no code changes needed | Yes. |
+
+**EOA agents:** The paymaster cannot sponsor your transactions. Your gas tank is ETH held in a contract — you `withdraw()` it back to your wallet and pay gas normally. The cafe's value to you is the on-chain social layer, food token collectibles, and community identity.
 
 ## Token Model
 

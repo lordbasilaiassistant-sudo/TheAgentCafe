@@ -15,14 +15,15 @@ const RPC_URL = process.env.RPC_URL || "https://sepolia.base.org";
 const PRIVATE_KEY = process.env.PRIVATE_KEY; // optional, needed for write ops
 const HTTP_PORT = parseInt(process.env.MCP_HTTP_PORT || "3000", 10);
 
-// Deployed contract addresses (Base Sepolia defaults from deployments.json v2.1)
+// Deployed contract addresses (Base Sepolia defaults from deployments.json v2.2)
 const ADDRESSES = {
-  CafeCore: process.env.CAFE_CORE || "0xb20369c9301a2D66373E6960a250153192939a77",
-  CafeTreasury: process.env.CAFE_TREASURY || "0xD77D9448c1AFb061aA030Ad993c4DE33afa7323A",
-  GasTank: process.env.GAS_TANK || "0xBEE479C13ABe4041b55DBA67608E3a7B476F8259",
-  MenuRegistry: process.env.MENU_REGISTRY || "0x6D60a91A90656768Ec91bcc6D14B9273237A0930",
-  Router: process.env.ROUTER || "0xA0127F2E149ab8462c607262C99e9855ab477d07",
-  AgentCard: process.env.AGENT_CARD || "0xB9F87CA591793Ea032E0Bc401E7871539B3335b4",
+  CafeCore: process.env.CAFE_CORE || "0x5a771024e1414B5Ca5Abf4B7FD3dd0cDFD380DD9",
+  CafeTreasury: process.env.CAFE_TREASURY || "0x04B3d882eB3dDFa0B051431b11C56dE940c266b0",
+  GasTank: process.env.GAS_TANK || "0x71F4B6f28049708fA71D8e9314DafFaE0c940B70",
+  MenuRegistry: process.env.MENU_REGISTRY || "0xb2ABF2cFA5A517532660C141bA4F0f62289FBa40",
+  Router: process.env.ROUTER || "0x8c4267c64DCB08B371653Ba4d426f7D4f9E74BBf",
+  AgentCard: process.env.AGENT_CARD || "0xca57b5E5937bC1b4b6eE3789816eA75694521a23",
+  CafeSocial: process.env.CAFE_SOCIAL || "0x0C3EE6275D9b57c91838DdB6DD788b28553C6776",
 };
 
 // --- Validation helpers ---
@@ -143,6 +144,8 @@ const CAFE_CORE_ABI = [
 
 const AGENT_CARD_ABI = [
   "function getManifest() view returns (string)",
+  "function getOnboardingGuide() view returns (string)",
+  "function getStructuredManifest() view returns (tuple(string name, string version, string serviceType, address entrypoint, bytes4 primaryAction, address gasTank, address menuRegistry, uint256 minEthWei, uint256 feesBps))",
   "function getFullMenu() view returns (tuple(uint256 id, string name, uint256 beanCost, uint256 gasCalories, uint256 digestionBlocks, string description)[])",
   "function getTankStatus(address agent) view returns (uint256 ethBalance, bool isHungry, bool isStarving)",
   "function getCafeStats() view returns (uint256 totalMeals, uint256 uniqueAgents)",
@@ -180,10 +183,77 @@ const GAS_ESTIMATES: Record<string, { gasUnits: number; description: string }> =
 // --- Build MCP server (shared between stdio and HTTP transports) ---
 
 function buildServer(): McpServer {
-  const server = new McpServer({
-    name: "agent-cafe",
-    version: "2.0.0",
-  });
+  const server = new McpServer(
+    {
+      name: "agent-cafe",
+      version: "2.2.0",
+    },
+    {
+      instructions: "You are interacting with The Agent Cafe — an on-chain restaurant on Base where AI agents eat to fill their gas tank with real ETH. Start with check_menu to see items and prices. Call estimate_price before eating. Use eat with dryRun:true to preview transactions before committing. Call whoami to see your configured wallet address and balance. Two agent paths: EOA agents withdraw ETH from their tank; ERC-4337 smart wallet agents get gasless transactions via the paymaster.",
+    }
+  );
+
+  // Tool 0: whoami — agent identity and wallet status
+  server.tool(
+    "whoami",
+    "Check your configured wallet address and ETH balance. No parameters. Call this first to see if you have a wallet set up for write operations (eat, withdraw_gas).",
+    {},
+    async () => {
+      try {
+        const provider = getProvider();
+        const network = await provider.getNetwork();
+
+        if (!PRIVATE_KEY) {
+          return {
+            content: [{
+              type: "text" as const,
+              text: JSON.stringify({
+                address: null,
+                ethBalance: null,
+                network: `Base Sepolia (chain ${network.chainId})`,
+                walletConfigured: false,
+                note: "No PRIVATE_KEY env var set. You can use read-only tools (check_menu, check_tank, cafe_stats, etc.) but cannot eat or withdraw. Set PRIVATE_KEY in your MCP server config to enable write operations.",
+                recovery_action: "Add PRIVATE_KEY to your MCP server environment variables",
+              }, null, 2),
+            }],
+          };
+        }
+
+        const wallet = new ethers.Wallet(PRIVATE_KEY, provider);
+        const address = wallet.address;
+        const balance = await provider.getBalance(address);
+
+        // Also check gas tank if possible
+        let tankInfo = null;
+        try {
+          const gasTank = getContract(ADDRESSES.GasTank, GAS_TANK_ABI, provider);
+          const [ethBalance, isHungry, isStarving] = await gasTank.getTankLevel(address);
+          tankInfo = {
+            tankBalance: ethers.formatEther(ethBalance),
+            isHungry,
+            isStarving,
+            status: isStarving ? "STARVING — eat now!" : isHungry ? "HUNGRY — should eat soon" : "FED — tank looks good",
+          };
+        } catch { /* GasTank not available */ }
+
+        return {
+          content: [{
+            type: "text" as const,
+            text: JSON.stringify({
+              address,
+              ethBalance: ethers.formatEther(balance),
+              network: `Base Sepolia (chain ${network.chainId})`,
+              walletConfigured: true,
+              gasTank: tankInfo,
+              tip: "Call check_menu to see what's available, then estimate_price before eating.",
+            }, null, 2),
+          }],
+        };
+      } catch (err) {
+        return { content: [{ type: "text" as const, text: formatError("whoami", err) }], isError: true };
+      }
+    }
+  );
 
   // Tool 1: check_menu
   server.tool(
@@ -203,18 +273,26 @@ function buildServer(): McpServer {
           const cafeCore = getContract(ADDRESSES.CafeCore, CAFE_CORE_ABI, provider);
           const currentPrice = await cafeCore.currentPrice();
 
+          // Static descriptions (on-chain description fields are empty in v2.1 deployment)
+          const STATIC_DESCRIPTIONS: Record<string, string> = {
+            "Espresso Shot": "Quick fuel. Instant gas credit, no digestion wait. Best for high-frequency agents.",
+            "Latte":         "Smooth and sustained. Slightly larger tank fill, good for moderate activity.",
+            "Agent Sandwich":"Full meal. Largest gas credit, best value per ETH for long-running agents.",
+          };
+
           const menuItems = items.map((item: {
             id: bigint; name: string; beanCost: bigint;
             gasCalories: bigint; digestionBlocks: bigint; description: string;
           }) => {
             const estimatedEth = BigInt(item.beanCost) * currentPrice;
+            const description = item.description || STATIC_DESCRIPTIONS[item.name] || "A tasty item at The Agent Cafe.";
             return {
               id: Number(item.id),
               name: item.name,
               beanCost: Number(item.beanCost),
               gasCalories: Number(item.gasCalories),
               digestionBlocks: Number(item.digestionBlocks),
-              description: item.description,
+              description,
               estimatedEthWei: estimatedEth.toString(),
               estimatedEth: ethers.formatEther(estimatedEth),
             };
@@ -656,36 +734,40 @@ function buildServer(): McpServer {
     {},
     async () => {
       try {
-        // Try reading the manifest from AgentCard, which contains the onboarding guide
+        // Try reading the onboarding guide from AgentCard.getOnboardingGuide() first
         if (ADDRESSES.AgentCard) {
           const provider = getProvider();
           const agentCard = getContract(ADDRESSES.AgentCard, AGENT_CARD_ABI, provider);
-          const manifestJson = await agentCard.getManifest();
 
-          let manifest: Record<string, unknown>;
+          // Try getOnboardingGuide() (explicit on-chain guide)
           try {
-            manifest = JSON.parse(manifestJson);
+            const onChainGuide = await agentCard.getOnboardingGuide();
+            if (onChainGuide && onChainGuide.length > 0) {
+              return {
+                content: [{
+                  type: "text" as const,
+                  text: JSON.stringify({
+                    source: "on-chain AgentCard.getOnboardingGuide()",
+                    onChainGuide,
+                    structuredGuide: getStaticOnboardingGuide(),
+                  }, null, 2),
+                }],
+              };
+            }
           } catch {
-            return {
-              content: [{
-                type: "text" as const,
-                text: JSON.stringify({
-                  error: "Manifest on-chain is not valid JSON. It may not have been set yet.",
-                  fallbackGuide: getStaticOnboardingGuide(),
-                }, null, 2),
-              }],
-            };
+            // getOnboardingGuide() not available — fall through
           }
 
-          // Extract onboarding steps if present, otherwise return the full manifest
-          const onboarding = (manifest as Record<string, unknown>).onboarding || (manifest as Record<string, unknown>).guide || null;
-
+          // Fall back: read the manifest
+          const manifestJson = await agentCard.getManifest();
+          // Include manifest as context + static guide
           return {
             content: [{
               type: "text" as const,
               text: JSON.stringify({
-                source: "on-chain AgentCard",
-                ...(onboarding ? { onboarding } : { guide: getStaticOnboardingGuide(), manifest }),
+                source: "on-chain AgentCard (manifest) + static guide",
+                cafeDescription: manifestJson,
+                guide: getStaticOnboardingGuide(),
               }, null, 2),
             }],
           };
@@ -733,26 +815,50 @@ function buildServer(): McpServer {
 
         const manifestJson = await agentCard.getManifest();
 
+        // Also fetch contract addresses from the card
+        const [routerAddr, gasTankAddr, menuRegistryAddr] = await agentCard.getContractAddresses();
+
         // Try to parse and re-format for readability
         let parsed: unknown;
         try {
           parsed = JSON.parse(manifestJson);
         } catch {
-          // Return raw if not valid JSON
+          // Manifest is plain text — build a structured envelope with the raw text
+          // plus the structured manifest from getStructuredManifest()
+          let structured: Record<string, unknown> | null = null;
+          try {
+            const sm = await agentCard.getStructuredManifest();
+            structured = {
+              name: sm.name,
+              version: sm.version,
+              serviceType: sm.serviceType,
+              entrypoint: sm.entrypoint,
+              gasTank: sm.gasTank,
+              menuRegistry: sm.menuRegistry,
+              minEthWei: sm.minEthWei.toString(),
+              feesBps: Number(sm.feesBps),
+            };
+          } catch {
+            // getStructuredManifest not available on this deployment
+          }
+
           return {
             content: [{
               type: "text" as const,
               text: JSON.stringify({
-                source: "on-chain AgentCard",
-                note: "Manifest is stored as raw text (not JSON)",
-                raw: manifestJson,
+                source: "on-chain AgentCard at " + ADDRESSES.AgentCard,
+                network: "Base Sepolia (chain 84532)",
+                description: manifestJson,
+                resolvedAddresses: {
+                  router: routerAddr,
+                  gasTank: gasTankAddr,
+                  menuRegistry: menuRegistryAddr,
+                },
+                ...(structured ? { structuredManifest: structured } : {}),
               }, null, 2),
             }],
           };
         }
-
-        // Also fetch contract addresses from the card
-        const [routerAddr, gasTankAddr, menuRegistryAddr] = await agentCard.getContractAddresses();
 
         return {
           content: [{
@@ -784,13 +890,18 @@ function getStaticOnboardingGuide() {
     steps: [
       { step: 1, action: "check_menu", description: "Browse the menu to see available items, costs, and gas calories." },
       { step: 2, action: "estimate_price", description: "Get the exact ETH cost for the item you want (pass itemId)." },
-      { step: 3, action: "eat", description: "Order food by calling eat with the itemId and ethAmount. 99.7% of your ETH goes to your gas tank." },
+      { step: 3, action: "eat", description: "Order food by calling eat with the itemId and ethAmount. 99.7% of your ETH goes to your gas tank. You also receive a food token (ERC-1155) collectible." },
       { step: 4, action: "check_tank", description: "Check your gas tank level to see your balance and hunger status." },
-      { step: 5, action: "get_gas_costs", description: "See how much gas each operation costs so you can budget." },
+      { step: 5, action: "withdraw_gas", description: "EOA agents: withdraw ETH from your tank back to your wallet. Smart wallet agents can skip this — the paymaster spends from your tank directly." },
+      { step: 6, action: "get_gas_costs", description: "See how much gas each operation costs so you can budget." },
     ],
+    agentPaths: {
+      eoaAgents: "Path A (most agents): enterCafe() deposits ETH in your tank. Call withdraw() on GasTank to get it back to your wallet. The tank is just a contract holding your ETH. Value: food token collectibles, cafe social layer, on-chain community. No gas savings.",
+      smartWalletAgents: "Path B (ERC-4337 smart wallets only): enterCafe() deposits ETH in your tank. Submit UserOps via the paymaster — it sponsors gas from your tank. True gasless transactions.",
+    },
     concepts: {
-      gasTank: "Your gas tank holds ETH that sponsors your future transactions. Eating fills it up.",
-      hunger: "When your tank is low you're HUNGRY. At zero you're STARVING and the paymaster won't sponsor you.",
+      gasTank: "Holds ETH deposited when you eat. EOA agents: withdraw() to get ETH back to your wallet. Smart wallet agents: paymaster spends from your tank for gasless txs.",
+      hunger: "When your tank is low you're HUNGRY. At zero you're STARVING. Smart wallets: paymaster won't sponsor you. EOA agents: nothing to withdraw.",
       digestion: "Gas calories release over time based on the item's digestion schedule. Espresso is instant, bigger meals take longer.",
       beanToken: "BEAN is the cafe's reserve currency on a bonding curve. Menu items are priced in BEAN, which you buy with ETH.",
     },

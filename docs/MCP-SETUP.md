@@ -2,6 +2,8 @@
 
 MCP server for Claude Code and any MCP-compatible agent. Exposes the cafe contracts as callable tools.
 
+**Important: EOA vs Smart Wallet.** Most MCP agents use EOA wallets (raw private key). The gas tank holds your ETH — use `withdraw_gas` to get it back to your wallet. The paymaster (gasless tx sponsorship) only works for smart wallet / ERC-4337 agents. EOA agents still benefit from food token collectibles, cafe community, and on-chain identity.
+
 ---
 
 ## Prerequisites
@@ -82,11 +84,11 @@ Override contract addresses if needed (defaults are the deployed Base Sepolia ad
 
 | Variable | Default |
 |----------|---------|
-| `ROUTER` | `0xA0127F2E149ab8462c607262C99e9855ab477d07` |
-| `GAS_TANK` | `0xBEE479C13ABe4041b55DBA67608E3a7B476F8259` |
-| `MENU_REGISTRY` | `0x6D60a91A90656768Ec91bcc6D14B9273237A0930` |
-| `CAFE_CORE` | `0xb20369c9301a2D66373E6960a250153192939a77` |
-| `AGENT_CARD` | `0xB9F87CA591793Ea032E0Bc401E7871539B3335b4` |
+| `ROUTER` | `0x8c4267c64DCB08B371653Ba4d426f7D4f9E74BBf` |
+| `GAS_TANK` | `0x71F4B6f28049708fA71D8e9314DafFaE0c940B70` |
+| `MENU_REGISTRY` | `0xb2ABF2cFA5A517532660C141bA4F0f62289FBa40` |
+| `CAFE_CORE` | `0x5a771024e1414B5Ca5Abf4B7FD3dd0cDFD380DD9` |
+| `AGENT_CARD` | `0xca57b5E5937bC1b4b6eE3789816eA75694521a23` |
 
 ---
 
@@ -98,10 +100,11 @@ Override contract addresses if needed (defaults are the deployed Base Sepolia ad
 ```json
 {
   "menu": [
-    { "id": 0, "name": "Espresso", "beanCost": 10, "gasCalories": 100, "digestionBlocks": 0, "estimatedEth": "0.005" },
-    { "id": 1, "name": "Latte",    "beanCost": 25, "gasCalories": 250, "digestionBlocks": 300, "estimatedEth": "0.01" },
-    { "id": 2, "name": "Sandwich", "beanCost": 50, "gasCalories": 500, "digestionBlocks": 600, "estimatedEth": "0.02" }
-  ]
+    { "id": 0, "name": "Espresso Shot", "beanCost": 50, "gasCalories": 300000, "digestionBlocks": 0, "estimatedEth": "0.00005025" },
+    { "id": 1, "name": "Latte",         "beanCost": 75, "gasCalories": 600000, "digestionBlocks": 30, "estimatedEth": "0.000075375" },
+    { "id": 2, "name": "Agent Sandwich","beanCost": 120,"gasCalories": 1200000,"digestionBlocks": 60, "estimatedEth": "0.0001206" }
+  ],
+  "note": "estimatedEth is the food token cost. Send any amount above this — 99.7% of what you send fills your gas tank."
 }
 ```
 
@@ -111,9 +114,9 @@ Override contract addresses if needed (defaults are the deployed Base Sepolia ad
 **Params**: `itemId: number`
 **Returns**: Exact ETH needed from the Router's `estimatePrice()` — accounts for current bonding curve state
 ```json
-{ "itemId": 0, "estimatedEthWei": "4985014", "estimatedEth": "0.004985014" }
+{ "itemId": 0, "estimatedEthWei": "52052013975002", "estimatedEth": "0.000052052013975002" }
 ```
-**Always call this before `eat`.** Price rises with $BEAN supply.
+**Always call this before `eat`.** Price rises with $BEAN supply. You can send more than the estimate — the excess goes straight to your gas tank.
 
 ---
 
@@ -176,6 +179,7 @@ Override contract addresses if needed (defaults are the deployed Base Sepolia ad
 **Params**: `amount: string` — ETH to withdraw (e.g. `"0.001"`)
 **Requires**: `PRIVATE_KEY` env var
 **Returns**: tx hash, remaining tank balance
+**Note**: This is the primary way EOA agents get ETH back from the tank. Smart wallet agents typically leave ETH in the tank for the paymaster to spend.
 ```json
 {
   "success": true,
@@ -241,11 +245,11 @@ Override contract addresses if needed (defaults are the deployed Base Sepolia ad
 **Returns**: Full on-chain manifest from AgentCard contract including all addresses and capabilities
 ```json
 {
-  "source": "on-chain AgentCard at 0xB9F87CA591793Ea032E0Bc401E7871539B3335b4",
+  "source": "on-chain AgentCard at 0xca57b5E5937bC1b4b6eE3789816eA75694521a23",
   "resolvedAddresses": {
-    "router": "0xA0127F2E149ab8462c607262C99e9855ab477d07",
-    "gasTank": "0xBEE479C13ABe4041b55DBA67608E3a7B476F8259",
-    "menuRegistry": "0x6D60a91A90656768Ec91bcc6D14B9273237A0930"
+    "router": "0x8c4267c64DCB08B371653Ba4d426f7D4f9E74BBf",
+    "gasTank": "0x71F4B6f28049708fA71D8e9314DafFaE0c940B70",
+    "menuRegistry": "0xb2ABF2cFA5A517532660C141bA4F0f62289FBa40"
   }
 }
 ```

@@ -46,6 +46,7 @@ contract AgentCafeRouter is ReentrancyGuard, Ownable, IERC165 {
         uint256 gasCaloriesGranted
     );
     event TreasuryUpdated(address indexed newTreasury);
+    event LoyaltyDiscount(address indexed agent, uint8 tier, uint256 savedWei);
 
     constructor(
         address _cafeCore,
@@ -80,8 +81,14 @@ contract AgentCafeRouter is ReentrancyGuard, Ownable, IERC165 {
         uint256 beanCost = item.beanCost;
         uint256 gasCaloriesGranted = 0;
 
-        // 1. Calculate all three portions up front
-        uint256 fee = (msg.value * FEE_BPS) / BPS;
+        // 1. Calculate all three portions up front (with loyalty discount)
+        uint256 feeReduction = menuRegistry.getFeeReductionBps(msg.sender);
+        uint256 effectiveFeeBps = FEE_BPS - feeReduction;
+        uint256 fee = (msg.value * effectiveFeeBps) / BPS;
+        if (feeReduction > 0) {
+            uint256 saved = (msg.value * feeReduction) / BPS;
+            emit LoyaltyDiscount(msg.sender, _getLoyaltyTier(feeReduction), saved);
+        }
         uint256 ethForBean = _estimateEthForBean(beanCost);
 
         // Ensure we never over-allocate (e.g. tiny ETH amounts where bean portion would exceed toTank)
@@ -118,10 +125,27 @@ contract AgentCafeRouter is ReentrancyGuard, Ownable, IERC165 {
             }
         }
 
-        // 4. Deposit remainder into agent's gas tank
-        gasTank.deposit{value: toTank}(msg.sender);
+        // 4. Deposit remainder into agent's gas tank with digestion schedule
+        if (item.digestionBlocks == 0) {
+            // Espresso: 100% instant, no digestion
+            gasTank.deposit{value: toTank}(msg.sender);
+        } else {
+            // Latte/Sandwich: split instant vs digesting based on item type
+            // Latte (30 blocks) = 50% instant, 50% digests over 300 blocks (~10 min on Base)
+            // Sandwich (60 blocks) = 30% instant, 70% digests over 600 blocks (~20 min on Base)
+            uint256 instantBps;
+            uint256 digestionBlocks;
+            if (item.digestionBlocks <= 30) {
+                instantBps = 5000;   // 50% instant
+                digestionBlocks = 300;
+            } else {
+                instantBps = 3000;   // 30% instant
+                digestionBlocks = 600;
+            }
+            gasTank.depositWithDigestion{value: toTank}(msg.sender, instantBps, digestionBlocks);
+        }
 
-        tankLevel = gasTank.tankBalance(msg.sender);
+        (tankLevel, , ) = gasTank.getTankLevel(msg.sender);
         emit AgentFed(msg.sender, itemId, toTank, tankLevel);
         emit MealComplete(msg.sender, itemId, item.name, msg.value, tankLevel, gasCaloriesGranted);
     }
@@ -188,6 +212,13 @@ contract AgentCafeRouter is ReentrancyGuard, Ownable, IERC165 {
         require(bal > 0, "No ETH to withdraw");
         (bool ok, ) = to.call{value: bal}("");
         require(ok, "ETH transfer failed");
+    }
+
+    /// @notice Convert fee reduction bps to tier number for events
+    function _getLoyaltyTier(uint256 feeReductionBps) internal pure returns (uint8) {
+        if (feeReductionBps >= 5) return 2; // VIP
+        if (feeReductionBps >= 2) return 1; // Regular
+        return 0; // Newcomer
     }
 
     receive() external payable {}

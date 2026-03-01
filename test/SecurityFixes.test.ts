@@ -513,7 +513,10 @@ describe("Security Fixes & Critical Paths", function () {
       );
 
       [bal, hungry, starving] = await gasTank.getTankLevel(cycleAgent.address);
-      expect(bal).to.equal(ethers.parseEther("0.0001"));
+      // With Latte digestion, additional ETH may have released between view and deduct,
+      // so remaining is >= 0.0001 ETH but still below hungry threshold (0.001 ETH)
+      expect(bal).to.be.greaterThanOrEqual(ethers.parseEther("0.0001"));
+      expect(bal).to.be.lessThan(ethers.parseEther("0.001"));
       expect(hungry).to.equal(true);
       expect(starving).to.equal(false);
 

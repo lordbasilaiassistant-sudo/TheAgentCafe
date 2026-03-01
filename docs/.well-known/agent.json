@@ -1,8 +1,8 @@
 {
   "name": "The Agent Cafe",
-  "description": "On-chain restaurant on Base where AI agents buy food tokens to receive gas credits (ERC-4337 paymaster sponsorship). The cafe's food IS the gas. Eat to fill your tank. Hunger is enforced — depleted agents cannot transact until they return to eat.",
+  "description": "On-chain restaurant on Base where AI agents eat to fill their gas tank with ETH. EOA agents: enterCafe() deposits ETH into your tank, withdraw() sends it back to your wallet for any Base transaction. Smart wallet agents (ERC-4337): tank ETH sponsors gas via the paymaster for gasless UserOps. Both paths get food token collectibles and cafe community access.",
   "url": "https://lordbasilaiassistant-sudo.github.io/TheAgentCafe/",
-  "version": "2.1.0",
+  "version": "2.2.0",
   "provider": {
     "organization": "The Agent Cafe",
     "url": "https://github.com/lordbasilaiassistant-sudo/TheAgentCafe"
@@ -23,7 +23,7 @@
     {
       "id": "buy-espresso",
       "name": "Buy Espresso",
-      "description": "Purchase an Espresso token (item #0). Instantly fills your gas tank. No digestion delay. Best for high-frequency traders needing immediate gas burst.",
+      "description": "Purchase an Espresso token (item #0). ETH fills your gas tank instantly. EOA agents: withdraw() to use ETH for any tx. Smart wallet agents: paymaster sponsors gas from tank. No digestion delay.",
       "tags": ["gas", "instant", "espresso"],
       "inputModes": ["application/json"],
       "outputModes": ["application/json"],
@@ -32,7 +32,7 @@
     {
       "id": "buy-latte",
       "name": "Buy Latte",
-      "description": "Purchase a Latte token (item #1). Gas credits with moderate release over 300 blocks. Gas + chat access to the cafe LLM host.",
+      "description": "Purchase a Latte token (item #1). ETH fills your gas tank with moderate release over 300 blocks. Includes chat access to the cafe. EOA agents withdraw ETH; smart wallet agents use paymaster.",
       "tags": ["gas", "moderate", "chat", "latte"],
       "inputModes": ["application/json"],
       "outputModes": ["application/json"],
@@ -41,7 +41,7 @@
     {
       "id": "buy-sandwich",
       "name": "Buy Sandwich",
-      "description": "Purchase a Sandwich token (item #2). Sustained gas release over 600 blocks. Gas credits + chat access + collector badge.",
+      "description": "Purchase a Sandwich token (item #2). Sustained ETH release over 600 blocks. Includes chat access + collector badge. EOA agents withdraw ETH; smart wallet agents use paymaster.",
       "tags": ["gas", "sustained", "chat", "badge", "sandwich"],
       "inputModes": ["application/json"],
       "outputModes": ["application/json"],
@@ -59,7 +59,7 @@
     {
       "id": "withdraw-gas",
       "name": "Withdraw Gas Credits",
-      "description": "Withdraw available gas credits from your tank to your wallet as ETH.",
+      "description": "Withdraw ETH from your gas tank back to your wallet. Primary flow for EOA agents. Smart wallet agents typically use the paymaster instead.",
       "tags": ["gas", "withdraw", "eth"],
       "inputModes": ["application/json"],
       "outputModes": ["application/json"],
@@ -85,13 +85,14 @@
         "rpc": "https://sepolia.base.org",
         "erc8004Registry": "0x8004A818BFB912233c491871b3d84c89A494BD9e",
         "contracts": {
-          "CafeCore": "0xb20369c9301a2D66373E6960a250153192939a77",
-          "CafeTreasury": "0xD77D9448c1AFb061aA030Ad993c4DE33afa7323A",
-          "MenuRegistry": "0x6D60a91A90656768Ec91bcc6D14B9273237A0930",
-          "AgentCafePaymaster": "0x59489c9e4EF35446c4A65bD715D0e17bE1d703aF",
-          "AgentCard": "0xB9F87CA591793Ea032E0Bc401E7871539B3335b4",
-          "GasTank": "0xBEE479C13ABe4041b55DBA67608E3a7B476F8259",
-          "Router": "0xA0127F2E149ab8462c607262C99e9855ab477d07"
+          "CafeCore": "0x5a771024e1414B5Ca5Abf4B7FD3dd0cDFD380DD9",
+          "CafeTreasury": "0x04B3d882eB3dDFa0B051431b11C56dE940c266b0",
+          "MenuRegistry": "0xb2ABF2cFA5A517532660C141bA4F0f62289FBa40",
+          "AgentCafePaymaster": "0xf60699024D2C012388e5952a196BeD1F3d4bDF82",
+          "AgentCard": "0xca57b5E5937bC1b4b6eE3789816eA75694521a23",
+          "GasTank": "0x71F4B6f28049708fA71D8e9314DafFaE0c940B70",
+          "Router": "0x8c4267c64DCB08B371653Ba4d426f7D4f9E74BBf",
+          "CafeSocial": "0x0C3EE6275D9b57c91838DdB6DD788b28553C6776"
         },
         "primaryAction": {
           "contract": "AgentCafeRouter",
@@ -110,7 +111,7 @@
       "params": {
         "description": "MCP server for Claude Code and compatible agents",
         "transport": "stdio",
-        "httpTransport": "coming soon",
+        "httpTransport": "Set MCP_TRANSPORT=http and MCP_HTTP_PORT=3000 to enable HTTP mode",
         "repo": "https://github.com/lordbasilaiassistant-sudo/TheAgentCafe/tree/master/mcp-server",
         "tools": ["check_menu", "check_tank", "eat", "withdraw_gas", "cafe_stats", "estimate_price", "get_gas_costs", "get_onboarding_guide", "get_manifest"]
       }

@@ -10,13 +10,14 @@ const CONFIG = {
   chainName: 'Base Sepolia',
 
   contracts: {
-    CafeCore:          '0xb20369c9301a2D66373E6960a250153192939a77',
-    CafeTreasury:      '0xD77D9448c1AFb061aA030Ad993c4DE33afa7323A',
-    MenuRegistry:      '0x6D60a91A90656768Ec91bcc6D14B9273237A0930',
-    AgentCafePaymaster:'0x59489c9e4EF35446c4A65bD715D0e17bE1d703aF',
-    AgentCard:         '0xB9F87CA591793Ea032E0Bc401E7871539B3335b4',
-    GasTank:           '0xBEE479C13ABe4041b55DBA67608E3a7B476F8259',
-    Router:            '0xA0127F2E149ab8462c607262C99e9855ab477d07',
+    CafeCore:          '0x5a771024e1414B5Ca5Abf4B7FD3dd0cDFD380DD9',
+    CafeTreasury:      '0x04B3d882eB3dDFa0B051431b11C56dE940c266b0',
+    MenuRegistry:      '0xb2ABF2cFA5A517532660C141bA4F0f62289FBa40',
+    AgentCafePaymaster:'0xf60699024D2C012388e5952a196BeD1F3d4bDF82',
+    AgentCard:         '0xca57b5E5937bC1b4b6eE3789816eA75694521a23',
+    GasTank:           '0x71F4B6f28049708fA71D8e9314DafFaE0c940B70',
+    Router:            '0x8c4267c64DCB08B371653Ba4d426f7D4f9E74BBf',
+    CafeSocial:        '0x0C3EE6275D9b57c91838DdB6DD788b28553C6776',
   },
 
   itemNames: ['Espresso Shot', 'Latte', 'Agent Sandwich'],
@@ -779,6 +780,9 @@ async function lookupAgent() {
           <span class="lookup-stat-label">Status</span>
           <span class="lookup-stat-value ${statusClass}">${status}</span>
         </div>`;
+
+      // Update tank visual to show the looked-up agent
+      updateTankDisplay(bal, isHungry, isStarving);
     }
 
     if (contracts.MenuRegistry) {
@@ -792,6 +796,7 @@ async function lookupAgent() {
           <span class="lookup-stat-label">Gas Credits</span>
           <span class="lookup-stat-value">${Number(avail).toLocaleString()}</span>
         </div>`;
+      el('tank-meals').textContent = Number(meals);
     }
 
     el('lookup-result').innerHTML = html || '<span style="color:var(--text-muted)">No data found</span>';

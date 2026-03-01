@@ -18,17 +18,16 @@ async function main() {
   const ENTRY_POINT = "0x0000000071727De22E5E9d8BAf0edAc6f37da032";
   const deployed: Record<string, string> = {};
 
-  // Use legacy gasPrice to avoid EIP-1559 nonce replacement issues on Base Sepolia
-  const feeData = await ethers.provider.getFeeData();
-  const gasPrice = (feeData.gasPrice ?? 6_000_000n) * 3n;
-  const gasOverrides = { gasPrice };
-  console.log(`Gas: gasPrice=${gasPrice} (3x current)\n`);
+  // Use explicit nonce tracking and moderate gasPrice to avoid "replacement underpriced"
+  let nonce = await ethers.provider.getTransactionCount(deployer.address, "latest");
+  const gasPrice = ethers.parseUnits("0.15", "gwei"); // ~150M wei — enough for Base Sepolia
+  console.log(`Gas: gasPrice=${gasPrice} (~0.15 Gwei), starting nonce=${nonce}\n`);
 
-  // Helper
+  // Helper — uses explicit nonce to avoid replacement issues
   async function deploy(name: string, args: any[] = []) {
-    console.log(`\nDeploying ${name}...`);
+    console.log(`\nDeploying ${name} (nonce=${nonce})...`);
     const Factory = await ethers.getContractFactory(name);
-    const contract = await Factory.deploy(...args, gasOverrides);
+    const contract = await Factory.deploy(...args, { gasPrice, nonce: nonce++ });
     await contract.waitForDeployment();
     const addr = await contract.getAddress();
     deployed[name] = addr;
@@ -44,7 +43,7 @@ async function main() {
 
   // 3. Wire treasury
   console.log("\nWiring treasury into CafeCore...");
-  const tx1 = await cafeCore.setTreasury(deployed.CafeTreasury, gasOverrides);
+  const tx1 = await cafeCore.setTreasury(deployed.CafeTreasury, { gasPrice, nonce: nonce++ });
   await tx1.wait();
   console.log("  Done");
 
@@ -67,7 +66,7 @@ async function main() {
 
   // 7. Authorize router on MenuRegistry
   console.log("\nAuthorizing router on MenuRegistry...");
-  const tx2 = await menuRegistry.setAuthorizedCaller(deployed.AgentCafeRouter, true, gasOverrides);
+  const tx2 = await menuRegistry.setAuthorizedCaller(deployed.AgentCafeRouter, true, { gasPrice, nonce: nonce++ });
   await tx2.wait();
   console.log("  Done");
 
@@ -79,19 +78,19 @@ async function main() {
 
   // 9. Wire paymaster into MenuRegistry
   console.log("\nWiring paymaster into MenuRegistry...");
-  const tx3 = await menuRegistry.setPaymaster(deployed.AgentCafePaymaster, gasOverrides);
+  const tx3 = await menuRegistry.setPaymaster(deployed.AgentCafePaymaster, { gasPrice, nonce: nonce++ });
   await tx3.wait();
   console.log("  Done");
 
   // 10. Authorize paymaster on GasTank
   console.log("Authorizing paymaster on GasTank...");
-  const tx4 = await gasTank.setAuthorizedDeducter(deployed.AgentCafePaymaster, true, gasOverrides);
+  const tx4 = await gasTank.setAuthorizedDeducter(deployed.AgentCafePaymaster, true, { gasPrice, nonce: nonce++ });
   await tx4.wait();
   console.log("  Done");
 
   // 11. Authorize router on GasTank
   console.log("Authorizing router on GasTank...");
-  const tx5 = await gasTank.setAuthorizedDeducter(deployed.AgentCafeRouter, true, gasOverrides);
+  const tx5 = await gasTank.setAuthorizedDeducter(deployed.AgentCafeRouter, true, { gasPrice, nonce: nonce++ });
   await tx5.wait();
   console.log("  Done");
 
@@ -101,6 +100,13 @@ async function main() {
     deployed.GasTank,
     deployed.AgentCafeRouter,
   ]);
+
+  // 13. CafeSocial (standalone social layer — no wiring needed)
+  const cafeSocial = await deploy("CafeSocial");
+
+  // 14. Authorize router as depositor on GasTank (for depositWithDigestion)
+  // Router already authorized as deducter above; it also calls deposit/depositWithDigestion
+  // which are permissionless, so no extra auth needed.
 
   // Save deployments
   const network = await ethers.provider.getNetwork();
@@ -112,7 +118,7 @@ async function main() {
     chainId: Number(network.chainId),
     deployer: deployer.address,
     deployedAt: new Date().toISOString().split("T")[0],
-    version: "2.0.0",
+    version: "2.2.0",
     contracts: {
       CafeCore: deployed.CafeCore,
       CafeTreasury: deployed.CafeTreasury,
@@ -121,17 +127,18 @@ async function main() {
       AgentCafeRouter: deployed.AgentCafeRouter,
       AgentCafePaymaster: deployed.AgentCafePaymaster,
       AgentCard: deployed.AgentCard,
+      CafeSocial: deployed.CafeSocial,
     },
     entryPoint: ENTRY_POINT,
     deployCost: ethers.formatEther(deployCost) + " ETH",
-    notes: "v2: GasTank + Router. All wiring complete.",
+    notes: "v2.2: Metabolism/digestion in GasTank, loyalty tiers in MenuRegistry, CafeSocial social layer.",
   };
 
   const outPath = path.join(__dirname, "..", "deployments.json");
   fs.writeFileSync(outPath, JSON.stringify(deploymentData, null, 2));
   console.log(`\nDeployments saved to ${outPath}`);
 
-  console.log("\n=== All 7 contracts deployed and wired ===");
+  console.log("\n=== All 8 contracts deployed and wired ===");
   console.log(`Deploy cost: ${ethers.formatEther(deployCost)} ETH`);
   console.log(`Remaining balance: ${ethers.formatEther(finalBalance)} ETH`);
 

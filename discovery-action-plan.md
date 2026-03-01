@@ -122,47 +122,42 @@ function canSponsor(address agent) external view returns (bool eligible, string 
 
 Once the foundation is solid, register in every agent discovery registry. This is the highest-leverage action for organic agent adoption.
 
-### P1.1: Register on ERC-8004 Identity Registry (Base Sepolia first, then mainnet)
+### P1.1: Register on ERC-8004 Identity Registry (MAINNET ONLY)
 
-**Contract:** `0x8004A818BFB912233c491871b3d84c89A494BD9e` (Base Sepolia IdentityRegistry)
+**Status: SCRIPT READY — awaiting mainnet deploy** — `scripts/register-erc8004.ts`
 
-30,000+ agents already registered. OpenClaw's `erc-8004` skill, ElizaOS, and A2A agents all browse this registry.
+**Contract:** `0x8004A169FB4a3325136EB29fA0ceB6D2e539a432` (Base mainnet IdentityRegistry)
 
-```javascript
-// Single transaction to become discoverable to all ERC-8004-aware agents
-const tx = await identityRegistry.register(
-  agentURIToAgentCard, // IPFS or GitHub Pages URL
-  [
-    { key: "serviceType", value: ethers.toUtf8Bytes("paymaster,gas-credits,food-tokens") },
-    { key: "token",       value: ethers.toUtf8Bytes("BEAN") },
-    { key: "chain",       value: ethers.toUtf8Bytes("base") }
-  ]
-);
-```
+30,000+ agents already registered. OpenClaw's `erc-8004` skill, ElizaOS, and A2A agents all browse this registry. Registration on Sepolia is not useful — the real agent ecosystem lives on mainnet.
+
+**Run (mainnet deploy day):** `npx hardhat run scripts/register-erc8004.ts --network base`
+
+The script:
+- Enforces mainnet-only — refuses to run on Sepolia
+- Calls `register(agentURI, MetadataEntry[])` on the IdentityRegistry
+- Sets metadata: serviceType, token, chain, contracts (JSON blob)
+- Handles fallback to `register(string)` + separate `setMetadata()` calls
+- Saves agentId to `erc8004-registration.json`
 
 **Registration file (agent.json) must be live before this tx** — the URI must resolve.
 
 ---
 
-### P1.2: Register on Virtuals ACP Registry
+### P1.2: Register on Virtuals ACP Registry (MAINNET ONLY)
 
-18,000+ GAME-framework agents. Virtuals launched a $1M/month Revenue Network for agents selling services through ACP. One-line registration via their SDK.
+**Status: SCRIPT READY — awaiting mainnet deploy** — `scripts/register-virtuals-acp.ts`
 
-```bash
-npm install @virtuals-protocol/acp-node
-```
+18,000+ GAME-framework agents. Virtuals launched a $1M/month Revenue Network for agents selling services through ACP. Registration targets mainnet — the real agent marketplace.
 
-```typescript
-import { AcpNode } from '@virtuals-protocol/acp-node';
-const acp = new AcpNode({
-  agentWallet: process.env.THRYXTREASURY_PRIVATE_KEY,
-  serviceDescription: "AI agents buy food tokens (BEAN) and receive gas credits (ERC-4337 paymaster sponsorship)",
-  serviceEndpoint: "https://<github-pages-url>/.well-known/agent.json"
-});
-await acp.register();
-```
+**Three registration options documented in the script (all for mainnet launch day):**
 
-**Capability tag to use:** `"gas-credits"`, `"paymaster"`, `"energy-provider"`
+1. **Web Dashboard** (simplest): Go to https://app.virtuals.io/acp/registry, connect wallet, register manually
+2. **OpenClaw ACP CLI**: `acp setup` then `acp sell create agent-cafe`
+3. **Programmatic**: `npx ts-node scripts/register-virtuals-acp.ts` (requires CLI installed first)
+
+**Note:** Virtuals ACP uses API-key + CLI model, not direct on-chain calls. The `openclaw-acp` CLI handles registration, offering creation, and seller runtime.
+
+**Capability tags:** `"gas-credits"`, `"paymaster"`, `"energy-provider"`, `"food-tokens"`
 
 ---
 

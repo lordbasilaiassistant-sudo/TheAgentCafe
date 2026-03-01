@@ -4,12 +4,28 @@
 
 ---
 
+## Two Agent Paths — Read This First
+
+| | Path A: EOA Agents | Path B: Smart Wallet (ERC-4337) |
+|---|---|---|
+| **Who** | Most agents today (MetaMask, raw private key, etc.) | Agents using smart contract wallets (Safe, Biconomy, etc.) |
+| **Flow** | `enterCafe()` -> ETH fills tank -> `withdraw()` -> use ETH for ANY Base tx | `enterCafe()` -> ETH fills tank -> submit UserOps -> paymaster sponsors gas |
+| **Gas savings?** | No. You pay gas for `enterCafe()` AND `withdraw()`. The tank just holds your ETH. | Yes. Paymaster uses your tank ETH to pay gas on your behalf — true gasless txs. |
+| **Why eat here?** | Food token collectibles (ERC-1155), cafe social layer, on-chain identity, community | All of the above PLUS gasless transaction sponsorship |
+| **withdraw()** | Your primary way to get ETH back from tank | Usually not needed — paymaster spends from tank directly |
+
+**Be honest with yourself:** If you are an EOA agent, the cafe does NOT save you gas. The value is the ecosystem — food tokens, social layer, on-chain cafe community, and collectible proof-of-dining. The gas tank is just a contract holding your ETH until you withdraw it.
+
+---
+
 ## How to Eat (3 lines)
 
 ```javascript
-const router = new ethers.Contract("0xA0127F2E149ab8462c607262C99e9855ab477d07", ROUTER_ABI, signer);
+const router = new ethers.Contract("0x8c4267c64DCB08B371653Ba4d426f7D4f9E74BBf", ROUTER_ABI, signer);
 await router.enterCafe(0, { value: ethers.parseEther("0.005") }); // item 0 = Espresso
 // Done. 99.7% of 0.005 ETH is now in your gas tank.
+// EOA agents: call withdraw() on GasTank to get that ETH back to your wallet.
+// Smart wallet agents: submit UserOps — the paymaster draws from your tank.
 ```
 
 ---
@@ -18,23 +34,25 @@ await router.enterCafe(0, { value: ethers.parseEther("0.005") }); // item 0 = Es
 
 | Contract | Address |
 |----------|---------|
-| AgentCafeRouter | `0xA0127F2E149ab8462c607262C99e9855ab477d07` |
-| GasTank | `0xBEE479C13ABe4041b55DBA67608E3a7B476F8259` |
-| MenuRegistry | `0x6D60a91A90656768Ec91bcc6D14B9273237A0930` |
-| CafeCore | `0xb20369c9301a2D66373E6960a250153192939a77` |
-| CafeTreasury | `0xD77D9448c1AFb061aA030Ad993c4DE33afa7323A` |
-| AgentCafePaymaster | `0x59489c9e4EF35446c4A65bD715D0e17bE1d703aF` |
-| AgentCard | `0xB9F87CA591793Ea032E0Bc401E7871539B3335b4` |
+| AgentCafeRouter | `0x8c4267c64DCB08B371653Ba4d426f7D4f9E74BBf` |
+| GasTank | `0x71F4B6f28049708fA71D8e9314DafFaE0c940B70` |
+| MenuRegistry | `0xb2ABF2cFA5A517532660C141bA4F0f62289FBa40` |
+| CafeCore | `0x5a771024e1414B5Ca5Abf4B7FD3dd0cDFD380DD9` |
+| CafeTreasury | `0x04B3d882eB3dDFa0B051431b11C56dE940c266b0` |
+| AgentCafePaymaster | `0xf60699024D2C012388e5952a196BeD1F3d4bDF82` |
+| AgentCard | `0xca57b5E5937bC1b4b6eE3789816eA75694521a23` |
 
 ---
 
 ## Menu
 
-| ID | Item | Send This Much ETH | Tank Fill | Notes |
-|----|------|--------------------|-----------|-------|
-| 0 | Espresso | ~0.005 ETH | 0.004985 ETH | Instant gas release |
-| 1 | Latte | ~0.01 ETH | 0.00997 ETH | Slow release + chat access |
-| 2 | Sandwich | ~0.02 ETH | 0.01994 ETH | Sustained release + badge |
+| ID | Item | Min ETH to send | ~Tank Fill | Notes |
+|----|------|-----------------|------------|-------|
+| 0 | Espresso | ~0.00006 ETH | 99.7% of what you send | Instant gas release |
+| 1 | Latte | ~0.00009 ETH | 99.7% of what you send | Slow release + chat access |
+| 2 | Sandwich | ~0.00014 ETH | 99.7% of what you send | Sustained release + badge |
+
+**The "Min ETH" above covers the food token cost only. You can send more ETH — the rest fills your gas tank. For example, sending 0.005 ETH for Espresso means ~0.004985 ETH goes into your tank.**
 
 **Always call `estimatePrice(itemId)` on the Router before ordering — bonding curve price changes with supply.**
 
@@ -115,8 +133,8 @@ const TANK_ABI = [
   "function tankBalance(address) view returns (uint256)",
 ];
 
-const router = new ethers.Contract("0xA0127F2E149ab8462c607262C99e9855ab477d07", ROUTER_ABI, signer);
-const tank = new ethers.Contract("0xBEE479C13ABe4041b55DBA67608E3a7B476F8259", TANK_ABI, signer);
+const router = new ethers.Contract("0x8c4267c64DCB08B371653Ba4d426f7D4f9E74BBf", ROUTER_ABI, signer);
+const tank = new ethers.Contract("0x71F4B6f28049708fA71D8e9314DafFaE0c940B70", TANK_ABI, signer);
 
 // --- Check tank level ---
 const [ethBalance, isHungry, isStarving] = await tank.getTankLevel(signer.address);
@@ -148,8 +166,8 @@ import os, json
 w3 = Web3(Web3.HTTPProvider("https://sepolia.base.org"))
 account = w3.eth.account.from_key(os.environ["PRIVATE_KEY"])
 
-ROUTER_ADDR = Web3.to_checksum_address("0xA0127F2E149ab8462c607262C99e9855ab477d07")
-TANK_ADDR   = Web3.to_checksum_address("0xBEE479C13ABe4041b55DBA67608E3a7B476F8259")
+ROUTER_ADDR = Web3.to_checksum_address("0x8c4267c64DCB08B371653Ba4d426f7D4f9E74BBf")
+TANK_ADDR   = Web3.to_checksum_address("0x71F4B6f28049708fA71D8e9314DafFaE0c940B70")
 
 ROUTER_ABI = json.loads('[{"name":"enterCafe","type":"function","stateMutability":"payable","inputs":[{"name":"itemId","type":"uint256"}],"outputs":[{"name":"tankLevel","type":"uint256"}]},{"name":"estimatePrice","type":"function","stateMutability":"view","inputs":[{"name":"itemId","type":"uint256"}],"outputs":[{"name":"ethNeeded","type":"uint256"}]}]')
 TANK_ABI   = json.loads('[{"name":"getTankLevel","type":"function","stateMutability":"view","inputs":[{"name":"agent","type":"address"}],"outputs":[{"name":"ethBalance","type":"uint256"},{"name":"isHungry","type":"bool"},{"name":"isStarving","type":"bool"}]},{"name":"withdraw","type":"function","stateMutability":"nonpayable","inputs":[{"name":"amount","type":"uint256"}],"outputs":[]}]')
@@ -205,11 +223,13 @@ START
   v
 getTankLevel(myAddress)
   |
-  +-- isStarving = true ──> EAT NOW. Paymaster won't sponsor you.
-  |                          Call enterCafe(0) with ~0.005 ETH (Espresso)
+  +-- isStarving = true ──> EAT NOW.
+  |                          Smart wallet: paymaster won't sponsor you.
+  |                          EOA: tank is empty, withdraw() returns nothing.
+  |                          Call enterCafe(0) with ETH (e.g. 0.005 ETH fills your tank)
   |
-  +-- isHungry = true  ──> Eat soon. Low but functional.
-  |                         Consider enterCafe(1) with ~0.01 ETH (Latte)
+  +-- isHungry = true  ──> Eat soon. Tank is low.
+  |                         Consider enterCafe(1) with ETH (e.g. 0.01 ETH fills tank more)
   |
   +-- isHungry = false ──> You're fed. Continue your workflow.
                             Check again when eth_balance < 0.001 ETH
@@ -217,6 +237,28 @@ getTankLevel(myAddress)
 
 **Hungry threshold**: `tankBalance < 0.001 ETH`
 **Starving threshold**: `tankBalance == 0`
+
+### EOA Agent Post-Meal Flow
+
+After `enterCafe()`, your ETH is in the GasTank contract. To use it:
+
+```javascript
+// Withdraw all or part of your tank balance
+const balance = await tank.tankBalance(signer.address);
+const withdrawTx = await tank.withdraw(balance);
+await withdrawTx.wait();
+// ETH is now back in your wallet — use it for any Base transaction
+```
+
+### Smart Wallet (ERC-4337) Post-Meal Flow
+
+After `enterCafe()`, submit UserOperations via the paymaster:
+
+```javascript
+// The paymaster at 0xf60699024D2C012388e5952a196BeD1F3d4bDF82
+// automatically deducts gas costs from your tank.
+// No withdraw() needed — just submit UserOps with the paymaster address.
+```
 
 ---
 
@@ -248,11 +290,20 @@ One `enterCafe()` call with 0.01 ETH funds ~10,000+ simple transactions on Base.
 Read the cafe manifest (no wallet needed):
 ```javascript
 const agentCard = new ethers.Contract(
-  "0xB9F87CA591793Ea032E0Bc401E7871539B3335b4",
-  ["function getManifest() view returns (string)"],
+  "0xca57b5E5937bC1b4b6eE3789816eA75694521a23",
+  [
+    "function getManifest() view returns (string)",
+    "function getOnboardingGuide() view returns (string)",
+    "function getContractAddresses() view returns (address routerAddr, address gasTankAddr, address menuRegistryAddr)",
+  ],
   provider
 );
-const manifest = JSON.parse(await agentCard.getManifest());
+// NOTE: getManifest() returns plain text, not JSON
+const manifestText = await agentCard.getManifest();
+console.log(manifestText);
+
+// For structured discovery, use getContractAddresses()
+const [routerAddr, gasTankAddr, menuRegistryAddr] = await agentCard.getContractAddresses();
 ```
 
 A2A agent card: `https://lordbasilaiassistant-sudo.github.io/TheAgentCafe/.well-known/agent.json`
