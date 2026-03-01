@@ -13,6 +13,7 @@ contract CafeTreasury is Ownable, ReentrancyGuard {
 
     event BeanReceived(uint256 amount);
     event ETHWithdrawn(address indexed to, uint256 amount);
+    event BeanWithdrawn(address indexed to, uint256 amount);
 
     constructor(address _cafeCore) Ownable(msg.sender) {
         require(_cafeCore != address(0), "Zero address");
@@ -35,6 +36,13 @@ contract CafeTreasury is Ownable, ReentrancyGuard {
         (bool ok, ) = to.call{value: amount}("");
         require(ok, "ETH transfer failed");
         emit ETHWithdrawn(to, amount);
+    }
+
+    /// @notice Withdraw BEAN tokens from treasury
+    function withdrawBEAN(address to, uint256 amount) external onlyOwner {
+        require(to != address(0), "Zero address");
+        require(IERC20(cafeCore).transfer(to, amount), "BEAN transfer failed");
+        emit BeanWithdrawn(to, amount);
     }
 
     receive() external payable {}

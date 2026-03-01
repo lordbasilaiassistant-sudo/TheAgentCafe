@@ -1,0 +1,19 @@
+{
+  "name": "agent-cafe-mcp",
+  "version": "1.0.0",
+  "description": "MCP server for AI agents to interact with The Agent Cafe on Base Sepolia",
+  "main": "dist/index.js",
+  "scripts": {
+    "build": "tsc",
+    "start": "node dist/index.js"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.12.1",
+    "ethers": "^6.13.4",
+    "dotenv": "^16.4.7"
+  },
+  "devDependencies": {
+    "typescript": "^5.7.3",
+    "@types/node": "^22.13.10"
+  }
+}

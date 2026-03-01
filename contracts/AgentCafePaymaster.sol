@@ -3,14 +3,18 @@ pragma solidity ^0.8.27;
 
 import "@account-abstraction/contracts/core/BasePaymaster.sol";
 import "@account-abstraction/contracts/interfaces/PackedUserOperation.sol";
-import "./MenuRegistry.sol";
+import "@account-abstraction/contracts/core/UserOperationLib.sol";
+import "./GasTank.sol";
 
-/// @title AgentCafePaymaster — ERC-4337 paymaster powered by metabolic energy
+/// @title AgentCafePaymaster — ERC-4337 paymaster powered by GasTank ETH
 /// @notice Agents that eat at The Agent Cafe get their transactions sponsored.
+///         Gas is deducted from their ETH gas tank balance.
 ///         No energy? "Agent is hungry -- visit The Agent Cafe"
-/// @dev Validates energy via MenuRegistry, deducts actual gas in postOp.
+/// @dev Validates balance via GasTank, deducts actual gas cost in postOp.
 contract AgentCafePaymaster is BasePaymaster {
-    MenuRegistry public immutable menuRegistry;
+    using UserOperationLib for PackedUserOperation;
+
+    GasTank public immutable gasTank;
 
     uint256 public constant MAX_GAS_PER_PERIOD = 2_000_000;
     uint256 public constant PERIOD_BLOCKS = 1800; // ~1 hour on Base (2s blocks)
@@ -22,13 +26,13 @@ contract AgentCafePaymaster is BasePaymaster {
 
     mapping(address => RateLimit) public rateLimits;
 
-    event GasSponsored(address indexed agent, uint256 gasUsed, uint256 remainingCredits);
+    event GasSponsored(address indexed agent, uint256 gasCostWei, uint256 remainingTank);
 
     constructor(
         IEntryPoint _entryPoint,
-        address _menuRegistry
+        address _gasTank
     ) BasePaymaster(_entryPoint) {
-        menuRegistry = MenuRegistry(_menuRegistry);
+        gasTank = GasTank(payable(_gasTank));
     }
 
     function _validatePaymasterUserOp(
@@ -38,17 +42,16 @@ contract AgentCafePaymaster is BasePaymaster {
     ) internal override returns (bytes memory context, uint256 validationData) {
         address agent = userOp.sender;
 
-        uint256 available = menuRegistry.settleAndGetAvailable(agent);
+        uint256 tankBal = gasTank.tankBalance(agent);
+        require(tankBal >= maxCost, "Agent is hungry -- visit The Agent Cafe");
 
-        // Convert maxCost (wei) to gas estimate
-        uint256 gasNeeded = maxCost / tx.gasprice;
-        if (gasNeeded == 0) gasNeeded = 100_000; // fallback estimate
-
-        require(available >= gasNeeded, "Agent is hungry -- visit The Agent Cafe");
-
+        // Rate limit check (gas units) — use userOp's maxFeePerGas, not tx.gasprice
+        uint256 maxFee = userOp.unpackMaxFeePerGas();
+        uint256 gasNeeded = maxFee > 0 ? maxCost / maxFee : 100_000;
+        if (gasNeeded == 0) gasNeeded = 100_000;
         _checkRateLimit(agent, gasNeeded);
 
-        context = abi.encode(agent, gasNeeded);
+        context = abi.encode(agent, maxCost);
         validationData = 0;
     }
 
@@ -61,13 +64,14 @@ contract AgentCafePaymaster is BasePaymaster {
         (address agent, ) = abi.decode(context, (address, uint256));
 
         if (mode != PostOpMode.postOpReverted) {
-            uint256 actualGasUsed = actualGasCost / actualUserOpFeePerGas;
-            if (actualGasUsed == 0) actualGasUsed = 1;
+            // Deduct actual gas cost in wei from agent's tank
+            uint256 costWei = actualGasCost;
+            if (costWei == 0) costWei = 1;
 
-            menuRegistry.deductGas(agent, actualGasUsed);
+            gasTank.deductForGas(agent, costWei);
 
-            (uint256 remainingGas, , , ) = menuRegistry.getAgentStatus(agent);
-            emit GasSponsored(agent, actualGasUsed, remainingGas);
+            uint256 remaining = gasTank.tankBalance(agent);
+            emit GasSponsored(agent, costWei, remaining);
         }
     }
 

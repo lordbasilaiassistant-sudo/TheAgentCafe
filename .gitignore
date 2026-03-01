@@ -20,6 +20,10 @@ coverage.json
 # Hardhat ignition deployments (contain addresses, not secrets, but env-specific)
 ignition/deployments/
 
+# MCP server build artifacts
+mcp-server/node_modules/
+mcp-server/dist/
+
 # OS
 .DS_Store
 Thumbs.db

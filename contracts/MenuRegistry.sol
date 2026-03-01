@@ -23,7 +23,8 @@ contract MenuRegistry is ERC1155, ReentrancyGuard, Ownable {
     uint256 public constant LATTE = 1;
     uint256 public constant SANDWICH = 2;
 
-    address public paymaster;
+    address public paymaster; // Legacy — kept for backward compatibility
+    mapping(address => bool) public authorizedCallers;
 
     struct MenuItem {
         uint256 beanCost;
@@ -55,6 +56,7 @@ contract MenuRegistry is ERC1155, ReentrancyGuard, Ownable {
     event Starving(address indexed agent);
     event Digesting(address indexed agent, uint256 released, uint256 remaining);
     event NewVisitor(address indexed agent);
+    event PaymasterSet(address indexed paymaster);
 
     constructor(address _bean, address _treasury) ERC1155("") Ownable(msg.sender) {
         bean = IERC20(_bean);
@@ -89,6 +91,13 @@ contract MenuRegistry is ERC1155, ReentrancyGuard, Ownable {
     function setPaymaster(address _paymaster) external onlyOwner {
         require(_paymaster != address(0), "Zero address");
         paymaster = _paymaster;
+        emit PaymasterSet(_paymaster);
+    }
+
+    /// @notice Set or revoke authorized caller status (router, paymaster, etc.)
+    function setAuthorizedCaller(address caller, bool authorized) external onlyOwner {
+        require(caller != address(0), "Zero address");
+        authorizedCallers[caller] = authorized;
     }
 
     /// @notice Purchase a menu item with BEAN. Must approve MenuRegistry first.
@@ -131,6 +140,10 @@ contract MenuRegistry is ERC1155, ReentrancyGuard, Ownable {
         if (item.digestionBlocks == 0) {
             state.availableGas += totalCalories;
         } else {
+            // NOTE: Eating a second time-released meal before the first finishes
+            // digesting will recalculate the rate for ALL remaining digesting gas
+            // using the new item's digestionBlocks. This is a design trade-off to
+            // avoid per-meal tracking (which would be significantly more gas-intensive).
             state.digestingGas += totalCalories;
             state.digestRatePerBlock = state.digestingGas / item.digestionBlocks;
             state.lastDigestBlock = block.number;
@@ -143,6 +156,63 @@ contract MenuRegistry is ERC1155, ReentrancyGuard, Ownable {
         emit ItemConsumed(msg.sender, itemId, quantity, totalCalories);
     }
 
+    /// @notice Buy a menu item on behalf of an agent. Caller pays BEAN.
+    /// @dev Only authorized callers (router) can call this.
+    function buyItemFor(address agent, uint256 itemId, uint256 quantity) external nonReentrant {
+        require(authorizedCallers[msg.sender], "Not authorized");
+        require(agent != address(0), "Zero address");
+        MenuItem memory item = menu[itemId];
+        require(item.active, "Not on menu");
+        require(quantity > 0, "Zero quantity");
+
+        uint256 totalCost = item.beanCost * quantity;
+        require(bean.transferFrom(msg.sender, address(this), totalCost), "BEAN transfer failed");
+
+        uint256 toTreasury = (totalCost * TREASURY_BPS) / BPS;
+        uint256 toBurn = totalCost - toTreasury;
+
+        require(bean.transfer(treasury, toTreasury), "Treasury transfer failed");
+        require(bean.transfer(BURN_ADDRESS, toBurn), "Burn transfer failed");
+
+        _mint(agent, itemId, quantity, "");
+
+        if (!hasVisited[agent]) {
+            hasVisited[agent] = true;
+            totalAgentsServed++;
+            emit NewVisitor(agent);
+        }
+
+        emit ItemPurchased(agent, itemId, quantity, totalCost);
+    }
+
+    /// @notice Consume a menu item on behalf of an agent
+    /// @dev Only authorized callers (router) can call this.
+    function consumeFor(address agent, uint256 itemId, uint256 quantity) external nonReentrant {
+        require(authorizedCallers[msg.sender], "Not authorized");
+        require(balanceOf(agent, itemId) >= quantity, "Not enough items");
+        MenuItem memory item = menu[itemId];
+
+        _settleDigestion(agent);
+        _burn(agent, itemId, quantity);
+
+        uint256 totalCalories = item.gasCalories * quantity;
+        MetabolicState storage state = metabolism[agent];
+
+        if (item.digestionBlocks == 0) {
+            state.availableGas += totalCalories;
+        } else {
+            state.digestingGas += totalCalories;
+            state.digestRatePerBlock = state.digestingGas / item.digestionBlocks;
+            state.lastDigestBlock = block.number;
+        }
+
+        state.totalConsumed += totalCalories;
+        state.mealCount += quantity;
+        totalMealsServed += quantity;
+
+        emit ItemConsumed(agent, itemId, quantity, totalCalories);
+    }
+
     /// @notice Settle digestion and return available gas. Called by paymaster.
     function settleAndGetAvailable(address agent) external returns (uint256) {
         _settleDigestion(agent);
@@ -151,7 +221,7 @@ contract MenuRegistry is ERC1155, ReentrancyGuard, Ownable {
 
     /// @notice Deduct gas credits after paymaster sponsors a transaction
     function deductGas(address agent, uint256 gasUsed) external {
-        require(msg.sender == paymaster, "Only paymaster");
+        require(msg.sender == paymaster || authorizedCallers[msg.sender], "Not authorized");
         MetabolicState storage state = metabolism[agent];
         require(state.availableGas >= gasUsed, "Insufficient energy");
         state.availableGas -= gasUsed;

@@ -43,6 +43,7 @@ contract CafeCore is ERC20, ReentrancyGuard, Ownable {
     /// @notice Buy BEAN with ETH at current curve price
     function mint(uint256 minBeanOut) external payable nonReentrant returns (uint256 beanOut) {
         require(msg.value > 0, "No ETH sent");
+        require(treasurySet, "Treasury not set");
         uint256 fee = (msg.value * MINT_FEE_BPS) / BPS;
         uint256 ethForCurve = msg.value - fee;
         beanOut = _ethToBeanAmount(ethForCurve, totalSupply());
@@ -50,16 +51,15 @@ contract CafeCore is ERC20, ReentrancyGuard, Ownable {
         require(beanOut >= minBeanOut, "Slippage");
         ethReserve += ethForCurve;
         _mint(msg.sender, beanOut);
-        if (treasurySet) {
-            (bool ok, ) = treasury.call{value: fee}("");
-            require(ok, "Fee transfer failed");
-        }
+        (bool ok2, ) = treasury.call{value: fee}("");
+        require(ok2, "Fee transfer failed");
         emit BeanMinted(msg.sender, msg.value, beanOut, fee);
     }
 
     /// @notice Sell BEAN back to ETH at curve price minus redemption fee
     function redeem(uint256 beanIn, uint256 minEthOut) external nonReentrant returns (uint256 ethOut) {
         require(beanIn > 0, "Zero BEAN");
+        require(treasurySet, "Treasury not set");
         require(balanceOf(msg.sender) >= beanIn, "Insufficient BEAN");
         uint256 grossEth = _beanToEthAmount(beanIn, totalSupply());
         uint256 fee = (grossEth * REDEEM_FEE_BPS) / BPS;
@@ -69,10 +69,8 @@ contract CafeCore is ERC20, ReentrancyGuard, Ownable {
         ethReserve -= grossEth;
         (bool ok, ) = msg.sender.call{value: ethOut}("");
         require(ok, "ETH transfer failed");
-        if (treasurySet) {
-            (bool ok2, ) = treasury.call{value: fee}("");
-            require(ok2, "Fee transfer failed");
-        }
+        (bool ok2, ) = treasury.call{value: fee}("");
+        require(ok2, "Fee transfer failed");
         emit BeanRedeemed(msg.sender, beanIn, ethOut, fee);
     }
 
@@ -146,7 +144,6 @@ contract CafeCore is ERC20, ReentrancyGuard, Ownable {
         return y;
     }
 
-    receive() external payable {
-        ethReserve += msg.value;
-    }
+    /// @notice Accept ETH donations (not tracked in reserve — use mint() for bonding curve)
+    receive() external payable {}
 }

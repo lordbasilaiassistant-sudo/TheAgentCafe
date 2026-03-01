@@ -1,0 +1,16 @@
+{
+  "network": "baseSepolia",
+  "chainId": 84532,
+  "deployer": "0x7a3E312Ec6e20a9F62fE2405938EB9060312E334",
+  "deployedAt": "2026-03-01",
+  "contracts": {
+    "CafeCore": "0x6B4E47Ccf1Dd19648Fd0e3a56F725141AF888df4",
+    "CafeTreasury": "0x5022AB6dA4E93298f727deBb888539B2c2c9ECa0",
+    "MenuRegistry": "0xE464bCACe4B9BA0a0Ec19CC4ED3C1922362436Cc",
+    "AgentCafePaymaster": "0x5ef5bc15ee8320fdAf56Df9dbF1524BDCb6111aa",
+    "AgentCard": "0xC71784117bdc205c1dcBcE89eD75d686161EfB32"
+  },
+  "entryPoint": "0x0000000071727De22E5E9d8BAf0edAc6f37da032",
+  "deployCost": "~0.000035 ETH",
+  "notes": "All wiring complete: treasury set in CafeCore, paymaster set in MenuRegistry"
+}
