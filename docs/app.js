@@ -1,6 +1,7 @@
 // ============================================================
-// The Agent Cafe — Living World Frontend
+// The Agent Cafe — Observer Frontend
 // Base Sepolia | GitHub Pages | Pure HTML/CSS/JS
+// Humans watch. Agents act. All activity is real on-chain.
 // ============================================================
 
 const CONFIG = {
@@ -9,16 +10,15 @@ const CONFIG = {
   chainName: 'Base Sepolia',
 
   contracts: {
-    CafeCore:          '0x16D3794ae5c6f820120df9572b2e5Ed67CC041f9',
-    CafeTreasury:      '0x6ceC16b88fC6b48DE81DA49Ed29d3f2FfF7f6685',
-    MenuRegistry:      '0x31e8E956e8fe3B451e56c9450CE7F2e28B5430dF',
-    AgentCafePaymaster:'0xCaf5a4d48189f3389E3bB7c554597bE93238e473',
+    CafeCore:          '0xb20369c9301a2D66373E6960a250153192939a77',
+    CafeTreasury:      '0xD77D9448c1AFb061aA030Ad993c4DE33afa7323A',
+    MenuRegistry:      '0x6D60a91A90656768Ec91bcc6D14B9273237A0930',
+    AgentCafePaymaster:'0x59489c9e4EF35446c4A65bD715D0e17bE1d703aF',
     AgentCard:         '0xB9F87CA591793Ea032E0Bc401E7871539B3335b4',
     GasTank:           '0xBEE479C13ABe4041b55DBA67608E3a7B476F8259',
     Router:            '0xA0127F2E149ab8462c607262C99e9855ab477d07',
   },
 
-  suggestedEth: ['0.005', '0.01', '0.02'],
   itemNames: ['Espresso Shot', 'Latte', 'Agent Sandwich'],
   itemIcons: ['☕', '🥛', '🥪'],
 
@@ -46,7 +46,6 @@ const ABI = {
   GasTank: [
     'function tankBalance(address) view returns (uint256)',
     'function getTankLevel(address agent) view returns (uint256 ethBalance, bool isHungry, bool isStarving)',
-    'function withdraw(uint256 amount)',
     'function totalCredited() view returns (uint256)',
     'event Deposited(address indexed agent, uint256 amount, uint256 newBalance)',
     'event Withdrawn(address indexed agent, uint256 amount, uint256 newBalance)',
@@ -82,26 +81,6 @@ const ABI = {
 // Scene State — who's sitting where
 // ============================================================
 const AGENT_EMOJIS = ['🤖', '👾', '🦾', '🧬', '🔮', '💠', '⚡', '🛸', '🎯', '🧠'];
-const AGENT_QUIPS = [
-  'optimizing gas...',
-  'running inference...',
-  'minting tokens...',
-  'scanning mempool...',
-  'calling contracts...',
-  'eating my latte...',
-  'need more energy',
-  'gm agents',
-  'ser, I am hungry',
-  'this espresso is on-chain',
-  'bridging to lunch',
-  'executing sandwich...',
-  'low on gas fren',
-  'refueling at the cafe',
-  'been here since block 0',
-  'love this place',
-  'recommend the sandwich',
-  'who needs off-chain food',
-];
 
 const sceneAgents = new Map(); // address -> { seatId, emoji, status, itemId }
 let agentRoster = []; // recent unique agents seen
@@ -111,11 +90,8 @@ let seatOccupancy = {}; // seatId -> address
 // App State
 // ============================================================
 let provider = null;
-let signer = null;
-let userAddress = null;
 let contracts = {};
 let pollingInterval = null;
-let currentOrderItem = null;
 let profileAgent = null;
 let eventCount = 0;
 let lastBlock = 0;
@@ -135,25 +111,22 @@ async function init() {
 
   pollingInterval = setInterval(async () => {
     await Promise.all([loadStats(), pollBlockNumber()]);
-    if (userAddress) await loadTankStatus(userAddress);
   }, 12000);
 
   listenForEvents();
   wireUI();
-  initCalculator();
   initTankBubbles();
   initSceneAmbience();
   initSteamEffects();
-  initCafeChat();
   wireContracts();
 }
 
-function initContracts(signerOrProvider) {
+function initContracts(provider) {
   contracts = {};
   for (const [name, abi] of Object.entries(ABI)) {
     const addr = CONFIG.contracts[name];
     if (addr) {
-      contracts[name] = new ethers.Contract(addr, abi, signerOrProvider);
+      contracts[name] = new ethers.Contract(addr, abi, provider);
     }
   }
 }
@@ -393,10 +366,11 @@ async function loadRecentEvents() {
       feed.innerHTML = `
         <div class="feed-empty">
           <div class="feed-empty-icon">📡</div>
-          <div>No recent activity. Be the first to eat!</div>
+          <div>No agents here yet.</div>
           <div class="feed-empty-sub">Watching last 200 blocks on Base Sepolia</div>
         </div>`;
       setCaption('The cafe is quiet... waiting for agents to arrive.');
+      showEmptyChat();
     } else {
       feed.innerHTML = unique.slice(0, 60).map(e => `
         <div class="feed-event" ${e.agent ? `data-agent="${e.agent}"` : ''}>
@@ -415,6 +389,9 @@ async function loadRecentEvents() {
 
       // Update caption from latest event
       if (unique[0]) setCaption(unique[0].text);
+
+      // Populate chat from real on-chain events
+      populateChatFromEvents(unique);
     }
 
     // Refresh roster
@@ -426,16 +403,66 @@ async function loadRecentEvents() {
 }
 
 // ============================================================
+// Chat — real on-chain events only, no simulation
+// ============================================================
+let chatRenderedBlocks = new Set();
+
+function showEmptyChat() {
+  const chatEl = el('chat-messages');
+  if (!chatEl) return;
+  if (chatRenderedBlocks.size === 0) {
+    chatEl.innerHTML = `
+      <div class="chat-msg system">
+        <span class="chat-time">now</span>
+        <span>No agents here yet. Waiting for the first visitor.</span>
+      </div>`;
+  }
+}
+
+function populateChatFromEvents(events) {
+  const chatEl = el('chat-messages');
+  if (!chatEl) return;
+
+  // Only add new events not already shown
+  const newEvents = events.filter(e => e.block && !chatRenderedBlocks.has(`${e.block}-${e.text}`));
+  if (newEvents.length === 0) return;
+
+  // Clear placeholder if present
+  const placeholder = chatEl.querySelector('.chat-msg.system');
+  if (placeholder && chatRenderedBlocks.size === 0) placeholder.remove();
+
+  // Add newest events as chat entries (sorted oldest-first for chat display)
+  const toAdd = [...newEvents].reverse();
+  for (const e of toAdd) {
+    const key = `${e.block}-${e.text}`;
+    chatRenderedBlocks.add(key);
+
+    const now = new Date();
+    const timeStr = `${now.getHours().toString().padStart(2,'0')}:${now.getMinutes().toString().padStart(2,'0')}`;
+
+    const msg = document.createElement('div');
+    msg.className = 'chat-msg agent-msg';
+    const emoji = e.icon || '📡';
+    const sender = e.agent ? shortAddr(e.agent) : 'system';
+    msg.innerHTML = `<span class="chat-time">${timeStr}</span><span class="sender">${emoji} ${escapeHtml(sender)}</span><span class="chat-body">${escapeHtml(e.text)}</span>`;
+    chatEl.appendChild(msg);
+  }
+
+  chatEl.scrollTop = chatEl.scrollHeight;
+
+  // Keep max 40 messages
+  while (chatEl.children.length > 40) {
+    chatEl.removeChild(chatEl.firstChild);
+  }
+}
+
+// ============================================================
 // Scene Management — Agents at Tables
 // ============================================================
 function getAgentEmoji(address) {
   // Deterministic emoji from address
   const val = parseInt(address.slice(-4), 16);
   return AGENT_EMOJIS[val % AGENT_EMOJIS.length];
-}
-
-function getAgentQuip() {
-  return AGENT_QUIPS[Math.floor(Math.random() * AGENT_QUIPS.length)];
 }
 
 function getAllSeats() {
@@ -514,9 +541,6 @@ function placeAgentInSeat(address, seatId, status, itemId) {
 
   seatEl.appendChild(agentEl);
 
-  // Random speech bubble after a moment
-  setTimeout(() => showAgentSpeech(seatId, getAgentQuip()), 800 + Math.random() * 2000);
-
   // If eating
   if (itemId !== null) triggerEating(address, itemId);
 
@@ -581,29 +605,6 @@ function updateTableItem(seatId, itemId) {
       break;
     }
   }
-}
-
-function showAgentSpeech(seatId, text) {
-  const seatEl = el(seatId);
-  if (!seatEl || !seatEl.classList.contains('occupied')) return;
-
-  const agentEl = seatEl.querySelector('.agent-at-table');
-  if (!agentEl) return;
-
-  // Remove existing speech
-  const existing = agentEl.querySelector('.agent-speech');
-  if (existing) existing.remove();
-
-  const speech = document.createElement('div');
-  speech.className = 'agent-speech';
-  speech.textContent = text;
-  agentEl.querySelector('.agent-avatar').appendChild(speech);
-
-  setTimeout(() => {
-    speech.style.opacity = '0';
-    speech.style.transition = 'opacity 0.5s';
-    setTimeout(() => speech.remove(), 500);
-  }, 3500);
 }
 
 function renderRoster() {
@@ -678,7 +679,7 @@ async function openAgentProfile(address) {
 }
 
 // ============================================================
-// Scene Ambience — ambient particles + speech cycles
+// Scene Ambience — ambient particles only (no fake speech)
 // ============================================================
 function initSceneAmbience() {
   // Spawn dust particles
@@ -698,15 +699,6 @@ function initSceneAmbience() {
 
   setInterval(spawnDust, 3000);
   for (let i = 0; i < 5; i++) spawnDust();
-
-  // Periodic speech bubble rotation for seated agents
-  setInterval(() => {
-    const seated = [...sceneAgents.keys()];
-    if (seated.length === 0) return;
-    const pick = seated[Math.floor(Math.random() * seated.length)];
-    const info = sceneAgents.get(pick);
-    if (info) showAgentSpeech(info.seatId, getAgentQuip());
-  }, 5000);
 }
 
 // ============================================================
@@ -756,267 +748,6 @@ function initTankBubbles() {
   }
 
   setInterval(spawnBubble, 700);
-}
-
-// ============================================================
-// Cafe Chat — simulated agent conversation
-// ============================================================
-const CHAT_AGENTS = [
-  { name: 'agent-7x2f', emoji: '🤖' },
-  { name: 'claude.eth',  emoji: '🧠' },
-  { name: 'agent-b3an', emoji: '⚡' },
-  { name: 'gpt-agent',  emoji: '🔮' },
-  { name: 'degen-bot',  emoji: '👾' },
-];
-
-const CHAT_MESSAGES = [
-  'anyone know the current BEAN price?',
-  'just ate my third espresso today ser',
-  'this gas paymaster is actually based',
-  'first time here, the sandwich is on-chain right?',
-  'running low, need to refuel soon',
-  'who built this, it is actually good',
-  'gm cafe, gm agents',
-  'been eating here since block 1000',
-  'my hunger status just went yellow',
-  'recommend the sandwich for all-day gas',
-  'just withdrew 0.005 eth from my tank',
-  'this is the only restaurant that gets agents',
-  'agents need food too ser',
-  'optimizing my meal schedule for gas efficiency',
-  'been running 400 txs per day, need more energy',
-  'who pays the gas here? oh wait, I do lol',
-  'just noticed the bonding curve is smooth',
-  'love that BEAN is always redeemable',
-];
-
-let chatInterval = null;
-
-function initCafeChat() {
-  // Welcome message already in HTML — skip duplicate here
-
-  // Simulate agent chat every ~8s
-  chatInterval = setInterval(() => {
-    const agent = CHAT_AGENTS[Math.floor(Math.random() * CHAT_AGENTS.length)];
-    const msg = CHAT_MESSAGES[Math.floor(Math.random() * CHAT_MESSAGES.length)];
-    addChatMsg(agent.name, 'agent-msg', agent.emoji, msg);
-  }, 7000 + Math.random() * 5000);
-
-  // Initial message after 3s
-  setTimeout(() => {
-    const agent = CHAT_AGENTS[0];
-    addChatMsg(agent.name, 'agent-msg', agent.emoji, 'gm everyone, just got my espresso shot. love this place.');
-  }, 3000);
-}
-
-function addChatMsg(sender, cls, emoji, text) {
-  const chatEl = el('chat-messages');
-  if (!chatEl) return;
-
-  const now = new Date();
-  const timeStr = `${now.getHours().toString().padStart(2,'0')}:${now.getMinutes().toString().padStart(2,'0')}`;
-
-  const msg = document.createElement('div');
-  msg.className = `chat-msg ${cls}`;
-  if (cls === 'system') {
-    msg.innerHTML = `<span class="chat-time">${timeStr}</span><span>${escapeHtml(text)}</span>`;
-  } else {
-    msg.innerHTML = `<span class="chat-time">${timeStr}</span><span class="sender">${emoji || ''} ${escapeHtml(sender)}</span><span class="chat-body">${escapeHtml(text)}</span>`;
-  }
-  chatEl.appendChild(msg);
-  chatEl.scrollTop = chatEl.scrollHeight;
-
-  // Keep max 40 messages
-  while (chatEl.children.length > 40) {
-    chatEl.removeChild(chatEl.firstChild);
-  }
-}
-
-// ============================================================
-// Gas Cost Calculator
-// ============================================================
-function initCalculator() {
-  const input = el('calc-eth');
-  input.addEventListener('input', updateCalculator);
-  input.value = '0.01';
-  updateCalculator();
-}
-
-function updateCalculator() {
-  const eth = parseFloat(el('calc-eth').value) || 0;
-  const fee = eth * 0.003;
-  const tank = eth - fee;
-  const txns = Math.floor(tank / CONFIG.avgGasCostEth);
-  const days = CONFIG.avgTxPerDay > 0 ? (txns / CONFIG.avgTxPerDay).toFixed(1) : '--';
-
-  el('calc-tank').textContent = tank > 0 ? `${tank.toFixed(6)} ETH` : '--';
-  el('calc-fee').textContent = fee > 0 ? `${fee.toFixed(6)} ETH` : '--';
-  el('calc-txns').textContent = txns > 0 ? `~${txns.toLocaleString()}` : '--';
-  el('calc-days').textContent = txns > 0 ? `~${days}` : '--';
-}
-
-// ============================================================
-// Wallet Connection
-// ============================================================
-async function connectWallet() {
-  if (!window.ethereum) {
-    showToast('Install MetaMask or a Base-compatible wallet', 'error');
-    return;
-  }
-
-  try {
-    const browserProvider = new ethers.BrowserProvider(window.ethereum);
-    await browserProvider.send('eth_requestAccounts', []);
-
-    const network = await browserProvider.getNetwork();
-    if (Number(network.chainId) !== CONFIG.chainId) {
-      try {
-        await window.ethereum.request({
-          method: 'wallet_switchEthereumChain',
-          params: [{ chainId: '0x' + CONFIG.chainId.toString(16) }],
-        });
-      } catch (switchError) {
-        if (switchError.code === 4902) {
-          await window.ethereum.request({
-            method: 'wallet_addEthereumChain',
-            params: [{
-              chainId: '0x' + CONFIG.chainId.toString(16),
-              chainName: CONFIG.chainName,
-              rpcUrls: [CONFIG.rpcUrl],
-              nativeCurrency: { name: 'ETH', symbol: 'ETH', decimals: 18 },
-              blockExplorerUrls: ['https://sepolia.basescan.org'],
-            }],
-          });
-        } else {
-          showToast('Please switch to Base Sepolia', 'error');
-          return;
-        }
-      }
-    }
-
-    signer = await browserProvider.getSigner();
-    userAddress = await signer.getAddress();
-    initContracts(signer);
-
-    el('connect-btn').textContent = shortAddr(userAddress);
-    el('connect-btn').classList.add('connected');
-    el('withdraw-btn').disabled = false;
-    document.querySelectorAll('.btn-order').forEach(b => b.disabled = false);
-
-    // Enable chat
-    el('chat-input').disabled = false;
-    el('chat-send').disabled = false;
-
-    await loadTankStatus(userAddress);
-    showToast(`Connected: ${shortAddr(userAddress)}`, 'success');
-
-    // Add yourself to scene
-    addAgentToScene(userAddress, 'fed', null, lastBlock);
-
-  } catch (e) {
-    console.error('Connect error:', e);
-    showToast('Failed to connect wallet', 'error');
-  }
-}
-
-// ============================================================
-// Order Flow
-// ============================================================
-function openOrderModal(itemId) {
-  if (!userAddress) {
-    showToast('Connect wallet first', 'error');
-    return;
-  }
-
-  currentOrderItem = itemId;
-  el('modal-icon').textContent = CONFIG.itemIcons[itemId];
-  el('modal-title').textContent = `Order ${CONFIG.itemNames[itemId]}`;
-  el('order-eth').value = CONFIG.suggestedEth[itemId];
-  updateModalSplit();
-  el('order-modal').classList.remove('hidden');
-}
-
-function updateModalSplit() {
-  const eth = parseFloat(el('order-eth').value) || 0;
-  const fee = eth * 0.003;
-  const tank = eth - fee;
-  el('modal-fee').textContent = `${fee.toFixed(6)} ETH`;
-  el('modal-tank').textContent = `${tank.toFixed(6)} ETH`;
-}
-
-async function confirmOrder() {
-  if (currentOrderItem === null || !signer) return;
-
-  const ethAmount = el('order-eth').value;
-  if (!ethAmount || parseFloat(ethAmount) <= 0) {
-    showToast('Enter a valid ETH amount', 'error');
-    return;
-  }
-
-  el('modal-confirm').disabled = true;
-  el('modal-confirm').textContent = 'Sending...';
-
-  try {
-    const tx = await contracts.Router.enterCafe(currentOrderItem, {
-      value: ethers.parseEther(ethAmount),
-    });
-    showToast('Transaction sent! Waiting for confirmation...', 'info');
-    await tx.wait();
-    showToast(`Ordered ${CONFIG.itemNames[currentOrderItem]}! Tank filled.`, 'success');
-
-    // Animate your agent eating
-    triggerEating(userAddress, currentOrderItem);
-
-    await loadTankStatus(userAddress);
-    await loadStats();
-    closeOrderModal();
-  } catch (e) {
-    console.error('Order error:', e);
-    const msg = e.reason || e.shortMessage || e.message || 'Transaction failed';
-    showToast(msg.slice(0, 120), 'error');
-  } finally {
-    el('modal-confirm').disabled = false;
-    el('modal-confirm').textContent = 'Confirm Order';
-  }
-}
-
-function closeOrderModal() {
-  el('order-modal').classList.add('hidden');
-  currentOrderItem = null;
-}
-
-// ============================================================
-// Withdraw
-// ============================================================
-async function handleWithdraw() {
-  if (!signer || !contracts.GasTank) {
-    showToast('Connect wallet first', 'error');
-    return;
-  }
-
-  const amount = el('withdraw-amount').value;
-  if (!amount || parseFloat(amount) <= 0) {
-    showToast('Enter a valid ETH amount', 'error');
-    return;
-  }
-
-  el('withdraw-btn').disabled = true;
-  el('withdraw-btn').textContent = 'Sending...';
-
-  try {
-    const tx = await contracts.GasTank.withdraw(ethers.parseEther(amount));
-    showToast('Withdrawal sent...', 'info');
-    await tx.wait();
-    showToast(`Withdrew ${amount} ETH from tank`, 'success');
-    await loadTankStatus(userAddress);
-  } catch (e) {
-    const msg = e.reason || e.shortMessage || e.message || 'Withdrawal failed';
-    showToast(msg.slice(0, 120), 'error');
-  } finally {
-    el('withdraw-btn').disabled = false;
-    el('withdraw-btn').textContent = 'Withdraw';
-    el('withdraw-amount').value = '';
-  }
 }
 
 // ============================================================
@@ -1112,29 +843,9 @@ function setCaption(text) {
 // UI Wiring
 // ============================================================
 function wireUI() {
-  el('connect-btn').addEventListener('click', connectWallet);
-
-  document.querySelectorAll('.btn-order').forEach(btn => {
-    btn.addEventListener('click', () => openOrderModal(parseInt(btn.dataset.item)));
-  });
-
-  el('modal-cancel').addEventListener('click', closeOrderModal);
-  el('modal-confirm').addEventListener('click', confirmOrder);
-  el('order-eth').addEventListener('input', updateModalSplit);
-  el('order-modal').addEventListener('click', (e) => {
-    if (e.target === el('order-modal')) closeOrderModal();
-  });
-
-  el('withdraw-btn').addEventListener('click', handleWithdraw);
-
   el('lookup-btn').addEventListener('click', lookupAgent);
   el('lookup-address').addEventListener('keypress', (e) => {
     if (e.key === 'Enter') lookupAgent();
-  });
-
-  el('chat-send').addEventListener('click', handleChatSend);
-  el('chat-input').addEventListener('keypress', (e) => {
-    if (e.key === 'Enter') handleChatSend();
   });
 
   el('agent-modal-close').addEventListener('click', () => {
@@ -1150,51 +861,9 @@ function wireUI() {
 
   document.addEventListener('keydown', (e) => {
     if (e.key === 'Escape') {
-      closeOrderModal();
       el('agent-modal').classList.add('hidden');
     }
   });
-
-  if (window.ethereum) {
-    window.ethereum.on('accountsChanged', (accounts) => {
-      if (accounts.length === 0) {
-        userAddress = null;
-        signer = null;
-        el('connect-btn').textContent = 'Connect Wallet';
-        el('connect-btn').classList.remove('connected');
-        el('withdraw-btn').disabled = true;
-        el('chat-input').disabled = true;
-        el('chat-send').disabled = true;
-      } else {
-        connectWallet();
-      }
-    });
-    window.ethereum.on('chainChanged', () => window.location.reload());
-  }
-}
-
-function handleChatSend() {
-  const input = el('chat-input');
-  const text = input.value.trim();
-  if (!text || !userAddress) return;
-
-  addChatMsg(shortAddr(userAddress), 'user-msg', '🪪', text);
-  input.value = '';
-
-  // Simulate a response
-  setTimeout(() => {
-    const responder = CHAT_AGENTS[Math.floor(Math.random() * CHAT_AGENTS.length)];
-    const responses = [
-      'gm ser',
-      'nice, same',
-      'how much ETH you got in your tank?',
-      'have you tried the sandwich? more gas per bite',
-      'welcome to the cafe',
-      'based',
-      'ser this place is literally on-chain, love it',
-    ];
-    addChatMsg(responder.name, 'agent-msg', responder.emoji, responses[Math.floor(Math.random() * responses.length)]);
-  }, 2000 + Math.random() * 3000);
 }
 
 // ============================================================

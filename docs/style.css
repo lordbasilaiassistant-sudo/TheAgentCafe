@@ -188,27 +188,6 @@ header h1 {
   border-color: var(--border);
 }
 
-.btn-order {
-  background: transparent;
-  border-color: var(--accent);
-  color: var(--accent);
-  font-weight: 700;
-  font-size: 0.72rem;
-  padding: 0.35rem 0.75rem;
-  flex-shrink: 0;
-}
-
-.btn-order:hover {
-  background: var(--accent-glow);
-  box-shadow: 0 0 16px rgba(200, 149, 106, 0.25);
-}
-
-.btn.connected {
-  background: var(--surface-2);
-  color: var(--green);
-  border-color: var(--green);
-  font-weight: 700;
-}
 
 /* ===== Stats Bar ===== */
 .stats-bar {
@@ -1091,8 +1070,6 @@ header h1 {
 .chat-msg.agent-msg .sender { color: var(--blue); }
 .chat-msg.user-msg .sender { color: var(--green); }
 
-.chat-input-row { display: flex; gap: 0.5rem; }
-
 /* ===== Gas Tank ===== */
 .tank-visual {
   display: flex;
@@ -1190,7 +1167,7 @@ header h1 {
 
 .tank-actions { margin-top: 0.5rem; }
 
-.withdraw-row, .lookup-row {
+.lookup-row {
   display: flex;
   gap: 0.5rem;
 }
