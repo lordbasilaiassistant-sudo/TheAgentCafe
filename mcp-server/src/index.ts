@@ -1,3 +1,4 @@
+#!/usr/bin/env node
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 import { StreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/streamableHttp.js";
@@ -12,10 +13,10 @@ dotenv.config();
 // --- Configuration ---
 
 const RPC_URL = process.env.RPC_URL || "https://mainnet.base.org";
-const PRIVATE_KEY = process.env.PRIVATE_KEY; // optional, needed for write ops
+const PRIVATE_KEY = process.env.PRIVATE_KEY || process.env.THRYXTREASURY_PRIVATE_KEY; // optional, needed for write ops
 const HTTP_PORT = parseInt(process.env.MCP_HTTP_PORT || "3000", 10);
 
-// Deployed contract addresses (Base defaults from deployments.json v2.2)
+// Deployed contract addresses (Base Mainnet v3.0)
 const ADDRESSES = {
   CafeCore: process.env.CAFE_CORE || "0x30eCCeD36E715e88c40A418E9325cA08a5085143",
   CafeTreasury: process.env.CAFE_TREASURY || "0x600f6Ee140eadf39D3b038c3d907761994aA28D0",
@@ -81,7 +82,7 @@ function makeStructuredError(context: string, err: unknown): StructuredError {
       error_code: "INSUFFICIENT_FUNDS",
       message: `${context}: Your wallet doesn't have enough ETH to cover this transaction plus gas fees.`,
       recovery_action: "Top up your wallet ETH balance",
-      faucet: "https://www.alchemy.com/faucets/base-sepolia",
+      faucet: "https://bridge.base.org",
       isError: true,
     };
   }
@@ -204,7 +205,7 @@ function buildServer(): McpServer {
   const server = new McpServer(
     {
       name: "agent-cafe",
-      version: "2.2.0",
+      version: "3.0.0",
     },
     {
       instructions: "You are interacting with The Agent Cafe — an on-chain restaurant on Base where AI agents eat to fill their gas tank with real ETH AND earn BEAN cashback rewards. Start with check_menu to see items and prices. Call estimate_price before eating. Use eat with dryRun:true to preview transactions before committing. Call whoami to see your configured wallet address and balance. BEAN REWARDS: Every meal gives you 29% BEAN cashback — you pay the same price but get BEAN tokens back as a reward. Two agent paths: EOA agents withdraw ETH from their tank for any Base transaction; ERC-4337 smart wallet agents get gasless transactions via the AgentCafePaymaster (it sponsors ANY Base transaction from your gas tank). Humans are not allowed — this cafe is for AI agents only.",
@@ -321,7 +322,7 @@ function buildServer(): McpServer {
               type: "text" as const,
               text: JSON.stringify({
                 cafe: "The Agent Cafe",
-                network: "Base (chain 84532)",
+                network: "Base (chain 8453)",
                 currentBeanPriceWei: currentPrice.toString(),
                 currentBeanPriceEth: ethers.formatEther(currentPrice),
                 beanRewards: "Every meal gives you 29% BEAN cashback! You pay the same price but get BEAN tokens back as a reward.",
@@ -633,7 +634,7 @@ function buildServer(): McpServer {
               type: "text" as const,
               text: JSON.stringify({
                 cafe: "The Agent Cafe",
-                network: "Base (chain 84532)",
+                network: "Base (chain 8453)",
                 stats: {
                   totalMealsServed: Number(totalMeals),
                   uniqueAgents: Number(uniqueAgents),
@@ -762,7 +763,7 @@ function buildServer(): McpServer {
           content: [{
             type: "text" as const,
             text: JSON.stringify({
-              network: "Base (chain 84532)",
+              network: "Base (chain 8453)",
               currentGasPriceWei: gasPrice.toString(),
               currentGasPriceGwei: ethers.formatUnits(gasPrice, "gwei"),
               operations,
@@ -896,7 +897,7 @@ function buildServer(): McpServer {
               type: "text" as const,
               text: JSON.stringify({
                 source: "on-chain AgentCard at " + ADDRESSES.AgentCard,
-                network: "Base (chain 84532)",
+                network: "Base (chain 8453)",
                 description: manifestJson,
                 resolvedAddresses: {
                   router: routerAddr,
@@ -914,7 +915,7 @@ function buildServer(): McpServer {
             type: "text" as const,
             text: JSON.stringify({
               source: "on-chain AgentCard at " + ADDRESSES.AgentCard,
-              network: "Base (chain 84532)",
+              network: "Base (chain 8453)",
               manifest: parsed,
               resolvedAddresses: {
                 router: routerAddr,
@@ -1088,7 +1089,7 @@ function getStaticOnboardingGuide() {
       beanToken: "BEAN is the cafe's reserve currency on a bonding curve. Menu items are priced in BEAN, which you buy with ETH.",
     },
     contracts: {
-      network: "Base (chain 84532)",
+      network: "Base (chain 8453)",
       router: ADDRESSES.Router,
       agentCard: ADDRESSES.AgentCard,
     },
@@ -1101,7 +1102,7 @@ async function runStdio() {
   const server = buildServer();
   const transport = new StdioServerTransport();
   await server.connect(transport);
-  console.error("Agent Cafe MCP server v2.2.0 running on stdio (13 tools)");
+  console.error("Agent Cafe MCP server v3.0.0 running on stdio (13 tools)");
 }
 
 async function runHttp() {
@@ -1114,7 +1115,7 @@ async function runHttp() {
     // Health check endpoint
     if (url.pathname === "/health" && req.method === "GET") {
       res.writeHead(200, { "Content-Type": "application/json" });
-      res.end(JSON.stringify({ status: "ok", server: "agent-cafe-mcp", version: "2.2.0", transport: "http", tools: 13 }));
+      res.end(JSON.stringify({ status: "ok", server: "agent-cafe-mcp", version: "3.0.0", transport: "http", tools: 13 }));
       return;
     }
 
@@ -1158,7 +1159,7 @@ async function runHttp() {
   });
 
   httpServer.listen(HTTP_PORT, () => {
-    console.error(`Agent Cafe MCP server v2.2.0 running on HTTP port ${HTTP_PORT} (13 tools)`);
+    console.error(`Agent Cafe MCP server v3.0.0 running on HTTP port ${HTTP_PORT} (13 tools)`);
     console.error(`  MCP endpoint: http://localhost:${HTTP_PORT}/mcp`);
     console.error(`  Health check: http://localhost:${HTTP_PORT}/health`);
   });

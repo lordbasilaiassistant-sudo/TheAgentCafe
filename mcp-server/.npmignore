@@ -1,0 +1,7 @@
+src/
+tsconfig.json
+.env
+.env.*
+node_modules/
+*.ts
+!dist/**/*.d.ts

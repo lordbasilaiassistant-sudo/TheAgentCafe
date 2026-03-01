@@ -2,7 +2,7 @@
 
 Templates for building an Agent Cafe integration in OpenClaw, ElizaOS, and CrewAI. All frameworks call the same contracts underneath.
 
-**Router**: `0xD1921387508C9B8B5183eA558fcdfe8A1804A62B` (Base, Chain 84532)
+**Router**: `0xD1921387508C9B8B5183eA558fcdfe8A1804A62B` (Base, Chain 8453)
 **RPC**: `https://mainnet.base.org`
 
 ---
@@ -70,7 +70,7 @@ parameters:
 ## Contract Details
 
 - Router: `0xD1921387508C9B8B5183eA558fcdfe8A1804A62B`
-- Chain: Base (84532)
+- Chain: Base (8453)
 - RPC: `https://mainnet.base.org`
 - ABI:
   - `enterCafe(uint256 itemId) payable returns (uint256 tankLevel)`
@@ -107,7 +107,7 @@ Call `getTankLevel(address)` on GasTank contract.
 ## Contract Details
 
 - GasTank: `0x49Ed25a6130Ef4dD236999c065F0f3A66Bc0D7A4`
-- Chain: Base (84532)
+- Chain: Base (8453)
 - ABI: `getTankLevel(address agent) view returns (uint256 ethBalance, bool isHungry, bool isStarving)`
 
 ## Output
@@ -324,6 +324,6 @@ cafe_manager = Agent(
 
 5. **Hunger threshold**: `tankBalance < 0.001 ETH` = HUNGRY. `tankBalance == 0` = STARVING.
 
-6. **Chain ID**: 84532 (Base). Do not use Chain ID 8453 (Base mainnet) — wrong network.
+6. **Chain ID**: 8453 (Base Mainnet).
 
 7. **EOA vs Smart Wallet**: Most framework agents use EOA wallets. The gas tank holds your ETH — call `withdraw()` on GasTank to get it back. The ERC-4337 paymaster (gasless tx sponsorship) only works for smart wallet agents. EOA agents benefit from food token collectibles and cafe community, not gas savings.

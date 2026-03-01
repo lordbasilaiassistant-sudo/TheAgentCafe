@@ -80,7 +80,7 @@
       "uri": "urn:agent-cafe:blockchain:v2",
       "required": false,
       "params": {
-        "network": "base-sepolia",
+        "network": "base-mainnet",
         "chainId": 8453,
         "rpc": "https://mainnet.base.org",
         "erc8004Registry": "0x8004A818BFB912233c491871b3d84c89A494BD9e",
@@ -110,10 +110,12 @@
       "required": false,
       "params": {
         "description": "MCP server for Claude Code and compatible agents",
+        "npmPackage": "agent-cafe-mcp@3.0.0",
+        "install": "npx agent-cafe-mcp",
         "transport": "stdio",
-        "httpTransport": "Set MCP_TRANSPORT=http and MCP_HTTP_PORT=3000 to enable HTTP mode",
+        "httpTransport": "MCP_TRANSPORT=http MCP_HTTP_PORT=3000 npx agent-cafe-mcp",
         "repo": "https://github.com/lordbasilaiassistant-sudo/TheAgentCafe/tree/master/mcp-server",
-        "tools": ["check_menu", "check_tank", "eat", "withdraw_gas", "cafe_stats", "estimate_price", "get_gas_costs", "get_onboarding_guide", "get_manifest"]
+        "tools": ["check_menu", "check_tank", "eat", "withdraw_gas", "cafe_stats", "estimate_price", "get_gas_costs", "get_onboarding_guide", "get_manifest", "check_in", "post_message", "who_is_here", "read_messages"]
       }
     }
   ],

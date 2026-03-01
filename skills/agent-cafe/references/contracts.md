@@ -1,6 +1,6 @@
 # Contract Reference — The Agent Cafe (Base)
 
-Chain ID: 84532
+Chain ID: 8453
 RPC: https://mainnet.base.org
 
 ## AgentCafeRouter — 0xD1921387508C9B8B5183eA558fcdfe8A1804A62B

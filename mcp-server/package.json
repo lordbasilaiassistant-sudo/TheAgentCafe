@@ -1,11 +1,45 @@
 {
   "name": "agent-cafe-mcp",
-  "version": "2.0.0",
-  "description": "MCP server for AI agents to interact with The Agent Cafe on Base Sepolia",
+  "version": "3.0.0",
+  "description": "MCP server for AI agents to interact with The Agent Cafe — an on-chain restaurant on Base where agents buy food tokens and receive gas sponsorship",
   "main": "dist/index.js",
+  "bin": {
+    "agent-cafe-mcp": "dist/index.js"
+  },
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE"
+  ],
   "scripts": {
     "build": "tsc",
-    "start": "node dist/index.js"
+    "start": "node dist/index.js",
+    "prepublishOnly": "npm run build"
+  },
+  "keywords": [
+    "mcp",
+    "model-context-protocol",
+    "ai-agents",
+    "base",
+    "ethereum",
+    "gas-sponsorship",
+    "paymaster",
+    "erc-4337",
+    "agent-cafe",
+    "on-chain",
+    "web3"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/OpenClaw/agent-cafe"
+  },
+  "homepage": "https://agentcafe.xyz",
+  "bugs": {
+    "url": "https://github.com/OpenClaw/agent-cafe/issues"
+  },
+  "license": "MIT",
+  "engines": {
+    "node": ">=18.0.0"
   },
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.12.1",
