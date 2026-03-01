@@ -25,6 +25,11 @@ ignition/deployments/
 mcp-server/node_modules/
 mcp-server/dist/
 
+# Credentials (defensive)
+*.key
+*.pem
+.env.*
+
 # OS
 .DS_Store
 Thumbs.db

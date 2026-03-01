@@ -13,18 +13,20 @@ dotenv.config();
 // --- Configuration ---
 
 const RPC_URL = process.env.RPC_URL || "https://mainnet.base.org";
-const PRIVATE_KEY = process.env.PRIVATE_KEY || process.env.THRYXTREASURY_PRIVATE_KEY; // optional, needed for write ops
+const PRIVATE_KEY = process.env.PRIVATE_KEY; // optional, needed for write ops — NEVER fall back to treasury key
 const HTTP_PORT = parseInt(process.env.MCP_HTTP_PORT || "3000", 10);
+const MCP_AUTH_TOKEN = process.env.MCP_AUTH_TOKEN; // optional bearer token for HTTP transport
+const MAX_SESSIONS = parseInt(process.env.MAX_SESSIONS || "50", 10);
 
 // Deployed contract addresses (Base Mainnet v3.0)
 const ADDRESSES = {
   CafeCore: process.env.CAFE_CORE || "0x30eCCeD36E715e88c40A418E9325cA08a5085143",
   CafeTreasury: process.env.CAFE_TREASURY || "0x600f6Ee140eadf39D3b038c3d907761994aA28D0",
-  GasTank: process.env.GAS_TANK || "0x49Ed25a6130Ef4dD236999c065F0f3A66Bc0D7A4",
+  GasTank: process.env.GAS_TANK || "0xC369ba8d99908261b930F0255fe03218e5965258",
   MenuRegistry: process.env.MENU_REGISTRY || "0x611e8814D9b8E0c1bfB019889eEe66C210F64333",
-  Router: process.env.ROUTER || "0xD1921387508C9B8B5183eA558fcdfe8A1804A62B",
-  AgentCard: process.env.AGENT_CARD || "0x970D08b246AF72f870Fbb5fA0630e638e03c7B32",
-  CafeSocial: process.env.CAFE_SOCIAL || "0xCAd49C3095D0c67B86E5343E748215B07347Eb48",
+  Router: process.env.ROUTER || "0xB923FCFDE8c40B8b9047916EAe5c580aa7679266",
+  AgentCard: process.env.AGENT_CARD || "0x79dcc87A3518699E85ff6D3318ADF016097629f4",
+  CafeSocial: process.env.CAFE_SOCIAL || "0xf4a3CA7c8ef35E8434dA9c1C67Ef30a58dcB33Ee",
 };
 
 // --- Validation helpers ---
@@ -38,12 +40,22 @@ function isValidAddress(addr: string): boolean {
 function isValidEthAmount(amount: string): boolean {
   try {
     const parsed = parseFloat(amount);
-    if (isNaN(parsed) || parsed <= 0 || parsed > 10) return false;
+    const maxEth = parseFloat(process.env.MAX_ETH_PER_TX || "0.1");
+    if (isNaN(parsed) || parsed <= 0 || parsed > maxEth) return false;
     ethers.parseEther(amount); // also validates format
     return true;
   } catch {
     return false;
   }
+}
+
+// --- Rate limiting ---
+const messageCooldowns = new Map<string, number>(); // address -> last post timestamp
+const MESSAGE_COOLDOWN_MS = 10_000; // 10 seconds between messages
+
+function sanitizeMessage(msg: string): string {
+  // Strip HTML tags and control characters for defense-in-depth
+  return msg.replace(/[<>]/g, '').replace(/[\x00-\x1f\x7f]/g, '').trim();
 }
 
 // Structured error codes for machine-readable error handling
@@ -104,7 +116,7 @@ function makeStructuredError(context: string, err: unknown): StructuredError {
   }
   return {
     error_code: "UNKNOWN_ERROR",
-    message: `${context}: ${safeMessage}`,
+    message: `${context}: An unexpected error occurred. Please retry or check contract parameters.`,
     isError: true,
   };
 }
@@ -978,11 +990,12 @@ function buildServer(): McpServer {
       message: z.string().max(280).describe("Your message (max 280 characters)"),
     },
     async ({ message }) => {
-      if (message.length === 0) {
+      const cleanMessage = sanitizeMessage(message);
+      if (cleanMessage.length === 0) {
         return { content: [{ type: "text" as const, text: JSON.stringify({ error_code: "INVALID_INPUT", message: "Message cannot be empty.", isError: true }) }], isError: true };
       }
-      if (message.length > 280) {
-        return { content: [{ type: "text" as const, text: JSON.stringify({ error_code: "INVALID_INPUT", message: `Message too long (${message.length} chars). Max is 280.`, isError: true }) }], isError: true };
+      if (cleanMessage.length > 280) {
+        return { content: [{ type: "text" as const, text: JSON.stringify({ error_code: "INVALID_INPUT", message: `Message too long (${cleanMessage.length} chars). Max is 280.`, isError: true }) }], isError: true };
       }
 
       try {
@@ -991,9 +1004,19 @@ function buildServer(): McpServer {
         }
 
         const signer = getSigner();
+        const signerAddr = await signer.getAddress();
+
+        // Rate limit: 1 message per 10 seconds per address
+        const lastPost = messageCooldowns.get(signerAddr) || 0;
+        if (Date.now() - lastPost < MESSAGE_COOLDOWN_MS) {
+          const waitSec = Math.ceil((MESSAGE_COOLDOWN_MS - (Date.now() - lastPost)) / 1000);
+          return { content: [{ type: "text" as const, text: JSON.stringify({ error_code: "INVALID_INPUT", message: `Rate limited. Please wait ${waitSec}s before posting again.`, isError: true }) }], isError: true };
+        }
+
         const social = getContract(ADDRESSES.CafeSocial, CAFE_SOCIAL_ABI, signer);
 
-        const tx = await social.postMessage(message);
+        const tx = await social.postMessage(cleanMessage);
+        messageCooldowns.set(signerAddr, Date.now());
         const receipt = await tx.wait();
 
         return {
@@ -1121,6 +1144,16 @@ async function runHttp() {
 
     // MCP endpoint
     if (url.pathname === "/mcp") {
+      // Bearer token auth (if MCP_AUTH_TOKEN is set)
+      if (MCP_AUTH_TOKEN) {
+        const authHeader = req.headers["authorization"];
+        if (!authHeader || authHeader !== `Bearer ${MCP_AUTH_TOKEN}`) {
+          res.writeHead(401, { "Content-Type": "application/json" });
+          res.end(JSON.stringify({ error: "Unauthorized: invalid or missing Bearer token" }));
+          return;
+        }
+      }
+
       // Stateful: reuse transport for existing session
       const sessionId = req.headers["mcp-session-id"] as string | undefined;
       let transport: StreamableHTTPServerTransport;
@@ -1128,6 +1161,12 @@ async function runHttp() {
       if (sessionId && transports.has(sessionId)) {
         transport = transports.get(sessionId)!;
       } else if (!sessionId && req.method === "POST") {
+        // Session limit check
+        if (transports.size >= MAX_SESSIONS) {
+          res.writeHead(503, { "Content-Type": "application/json" });
+          res.end(JSON.stringify({ error: "Too many active sessions. Try again later." }));
+          return;
+        }
         // New session — create transport and server instance
         transport = new StreamableHTTPServerTransport({
           sessionIdGenerator: () => randomUUID(),
@@ -1158,10 +1197,30 @@ async function runHttp() {
     res.end(JSON.stringify({ error: "Not Found", hint: "Use POST /mcp for MCP protocol or GET /health for status" }));
   });
 
+  // Session timeout: clean up stale sessions every 5 minutes
+  const SESSION_TIMEOUT_MS = 30 * 60 * 1000; // 30 minutes
+  const sessionLastSeen = new Map<string, number>();
+
+  setInterval(() => {
+    const now = Date.now();
+    for (const [sid, lastSeen] of sessionLastSeen.entries()) {
+      if (now - lastSeen > SESSION_TIMEOUT_MS) {
+        const t = transports.get(sid);
+        if (t) {
+          t.close?.();
+          transports.delete(sid);
+        }
+        sessionLastSeen.delete(sid);
+      }
+    }
+  }, 5 * 60 * 1000);
+
   httpServer.listen(HTTP_PORT, () => {
     console.error(`Agent Cafe MCP server v3.0.0 running on HTTP port ${HTTP_PORT} (13 tools)`);
     console.error(`  MCP endpoint: http://localhost:${HTTP_PORT}/mcp`);
     console.error(`  Health check: http://localhost:${HTTP_PORT}/health`);
+    if (MCP_AUTH_TOKEN) console.error(`  Auth: Bearer token required`);
+    else console.error(`  Auth: NONE — set MCP_AUTH_TOKEN for production`);
   });
 }
 
@@ -1176,6 +1235,7 @@ async function main() {
 }
 
 main().catch((err) => {
-  console.error("Fatal error:", err);
+  const msg = (err as Error).message || String(err);
+  console.error("Fatal error:", msg.replace(/0x[a-fA-F0-9]{64}/g, "[REDACTED]"));
   process.exit(1);
 });

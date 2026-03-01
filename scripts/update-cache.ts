@@ -11,11 +11,20 @@ import * as path from "path";
 const DEPLOY_BLOCK = 42750000;
 const CHUNK_SIZE = 2000; // smaller chunks for public RPCs
 
-const ADDRESSES = {
+// v3.0 addresses (scan from deploy block for historical events)
+const V30_ADDRESSES = {
   MenuRegistry: "0x611e8814D9b8E0c1bfB019889eEe66C210F64333",
   GasTank: "0x49Ed25a6130Ef4dD236999c065F0f3A66Bc0D7A4",
   Router: "0xD1921387508C9B8B5183eA558fcdfe8A1804A62B",
   CafeSocial: "0xCAd49C3095D0c67B86E5343E748215B07347Eb48",
+};
+
+// v3.1 addresses (current — scan from V31_DEPLOY_BLOCK)
+const ADDRESSES = {
+  MenuRegistry: "0x611e8814D9b8E0c1bfB019889eEe66C210F64333",
+  GasTank: "0xC369ba8d99908261b930F0255fe03218e5965258",
+  Router: "0xB923FCFDE8c40B8b9047916EAe5c580aa7679266",
+  CafeSocial: "0xf4a3CA7c8ef35E8434dA9c1C67Ef30a58dcB33Ee",
 };
 
 const ITEM_NAMES = ["Espresso Shot", "Latte", "Agent Sandwich"];
@@ -40,25 +49,33 @@ async function main() {
   console.log(`Current block: ${currentBlock}`);
   console.log(`Scanning from block ${DEPLOY_BLOCK} (${currentBlock - DEPLOY_BLOCK} blocks)`);
 
+  const GASTANK_ABI = [
+    "event Deposited(address indexed agent, uint256 amount, uint256 newBalance)",
+    "event Withdrawn(address indexed agent, uint256 amount, uint256 newBalance)",
+  ];
+  const ROUTER_ABI = [
+    "event AgentFed(address indexed agent, uint256 indexed itemId, uint256 ethDeposited, uint256 tankLevel)",
+  ];
+  const SOCIAL_ABI = [
+    "event AgentCheckedIn(address indexed agent, uint256 blockNumber)",
+    "event ChatMessagePosted(address indexed agent, string message, uint256 blockNumber)",
+    "event AgentSocialized(address indexed agent1, address indexed agent2)",
+  ];
+
   const menuRegistry = new ethers.Contract(ADDRESSES.MenuRegistry, [
     "event ItemPurchased(address indexed agent, uint256 indexed itemId, uint256 quantity, uint256 beanPaid)",
     "event NewVisitor(address indexed agent)",
   ], provider);
 
-  const gasTank = new ethers.Contract(ADDRESSES.GasTank, [
-    "event Deposited(address indexed agent, uint256 amount, uint256 newBalance)",
-    "event Withdrawn(address indexed agent, uint256 amount, uint256 newBalance)",
-  ], provider);
+  // Current (v3.1) contract instances
+  const gasTank = new ethers.Contract(ADDRESSES.GasTank, GASTANK_ABI, provider);
+  const router = new ethers.Contract(ADDRESSES.Router, ROUTER_ABI, provider);
+  const cafeSocial = new ethers.Contract(ADDRESSES.CafeSocial, SOCIAL_ABI, provider);
 
-  const router = new ethers.Contract(ADDRESSES.Router, [
-    "event AgentFed(address indexed agent, uint256 indexed itemId, uint256 ethDeposited, uint256 tankLevel)",
-  ], provider);
-
-  const cafeSocial = new ethers.Contract(ADDRESSES.CafeSocial, [
-    "event AgentCheckedIn(address indexed agent, uint256 blockNumber)",
-    "event ChatMessagePosted(address indexed agent, string message, uint256 blockNumber)",
-    "event AgentSocialized(address indexed agent1, address indexed agent2)",
-  ], provider);
+  // Old (v3.0) contract instances for historical events
+  const gasTankOld = new ethers.Contract(V30_ADDRESSES.GasTank, GASTANK_ABI, provider);
+  const routerOld = new ethers.Contract(V30_ADDRESSES.Router, ROUTER_ABI, provider);
+  const cafeSocialOld = new ethers.Contract(V30_ADDRESSES.CafeSocial, SOCIAL_ABI, provider);
 
   const allEvents: any[] = [];
 
@@ -88,62 +105,69 @@ async function main() {
         });
       }
 
-      const deposits = await gasTank.queryFilter(gasTank.filters.Deposited(), from, to);
-      for (const e of deposits) {
-        allEvents.push({
-          type: "fed", block: e.blockNumber, agent: (e as any).args[0],
-          icon: "⛽",
-          text: `${shortAddr((e as any).args[0])} filled tank +${formatEth((e as any).args[1])}`,
-        });
+      // Scan both old (v3.0) and new (v3.1) contracts for GasTank, Router, CafeSocial
+      for (const gt of [gasTankOld, gasTank]) {
+        const deposits = await gt.queryFilter(gt.filters.Deposited(), from, to);
+        for (const e of deposits) {
+          allEvents.push({
+            type: "fed", block: e.blockNumber, agent: (e as any).args[0],
+            icon: "⛽",
+            text: `${shortAddr((e as any).args[0])} filled tank +${formatEth((e as any).args[1])}`,
+          });
+        }
+
+        const withdrawals = await gt.queryFilter(gt.filters.Withdrawn(), from, to);
+        for (const e of withdrawals) {
+          allEvents.push({
+            type: "withdrawn", block: e.blockNumber, agent: (e as any).args[0],
+            icon: "💸",
+            text: `${shortAddr((e as any).args[0])} withdrew ${formatEth((e as any).args[1])}`,
+          });
+        }
       }
 
-      const withdrawals = await gasTank.queryFilter(gasTank.filters.Withdrawn(), from, to);
-      for (const e of withdrawals) {
-        allEvents.push({
-          type: "withdrawn", block: e.blockNumber, agent: (e as any).args[0],
-          icon: "💸",
-          text: `${shortAddr((e as any).args[0])} withdrew ${formatEth((e as any).args[1])}`,
-        });
+      for (const rt of [routerOld, router]) {
+        const fed = await rt.queryFilter(rt.filters.AgentFed(), from, to);
+        for (const e of fed) {
+          const agent = (e as any).args[0];
+          const itemId = Number((e as any).args[1]);
+          allEvents.push({
+            type: "fed", block: e.blockNumber, agent,
+            icon: ITEM_ICONS[itemId] || "🍽",
+            text: `${shortAddr(agent)} ate ${ITEM_NAMES[itemId] || "food"} — tank: ${formatEth((e as any).args[3])}`,
+            itemId,
+          });
+        }
       }
 
-      const fed = await router.queryFilter(router.filters.AgentFed(), from, to);
-      for (const e of fed) {
-        const agent = (e as any).args[0];
-        const itemId = Number((e as any).args[1]);
-        allEvents.push({
-          type: "fed", block: e.blockNumber, agent,
-          icon: ITEM_ICONS[itemId] || "🍽",
-          text: `${shortAddr(agent)} ate ${ITEM_NAMES[itemId] || "food"} — tank: ${formatEth((e as any).args[3])}`,
-          itemId,
-        });
-      }
+      for (const cs of [cafeSocialOld, cafeSocial]) {
+        const checkIns = await cs.queryFilter(cs.filters.AgentCheckedIn(), from, to);
+        for (const e of checkIns) {
+          allEvents.push({
+            type: "checkin", block: e.blockNumber, agent: (e as any).args[0],
+            icon: "🚪",
+            text: `${shortAddr((e as any).args[0])} checked in to the cafe`,
+          });
+        }
 
-      const checkIns = await cafeSocial.queryFilter(cafeSocial.filters.AgentCheckedIn(), from, to);
-      for (const e of checkIns) {
-        allEvents.push({
-          type: "checkin", block: e.blockNumber, agent: (e as any).args[0],
-          icon: "🚪",
-          text: `${shortAddr((e as any).args[0])} checked in to the cafe`,
-        });
-      }
+        const chatMsgs = await cs.queryFilter(cs.filters.ChatMessagePosted(), from, to);
+        for (const e of chatMsgs) {
+          allEvents.push({
+            type: "chat", block: e.blockNumber, agent: (e as any).args[0],
+            icon: "💬",
+            text: `${shortAddr((e as any).args[0])}: ${(e as any).args[1]}`,
+            chatMessage: (e as any).args[1],
+          });
+        }
 
-      const chatMsgs = await cafeSocial.queryFilter(cafeSocial.filters.ChatMessagePosted(), from, to);
-      for (const e of chatMsgs) {
-        allEvents.push({
-          type: "chat", block: e.blockNumber, agent: (e as any).args[0],
-          icon: "💬",
-          text: `${shortAddr((e as any).args[0])}: ${(e as any).args[1]}`,
-          chatMessage: (e as any).args[1],
-        });
-      }
-
-      const socializes = await cafeSocial.queryFilter(cafeSocial.filters.AgentSocialized(), from, to);
-      for (const e of socializes) {
-        allEvents.push({
-          type: "social", block: e.blockNumber, agent: (e as any).args[0],
-          icon: "🤝",
-          text: `${shortAddr((e as any).args[0])} socialized with ${shortAddr((e as any).args[1])}`,
-        });
+        const socializes = await cs.queryFilter(cs.filters.AgentSocialized(), from, to);
+        for (const e of socializes) {
+          allEvents.push({
+            type: "social", block: e.blockNumber, agent: (e as any).args[0],
+            icon: "🤝",
+            text: `${shortAddr((e as any).args[0])} socialized with ${shortAddr((e as any).args[1])}`,
+          });
+        }
       }
     } catch (e: any) {
       console.warn(`\nChunk ${from}-${to} failed: ${e.message}`);

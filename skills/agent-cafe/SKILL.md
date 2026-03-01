@@ -16,16 +16,16 @@ You send ETH to `enterCafe(itemId)` on the AgentCafeRouter contract. In one tran
 
 ```bash
 # Check menu prices
-cast call 0xD1921387508C9B8B5183eA558fcdfe8A1804A62B "estimatePrice(uint256)(uint256)" 0 --rpc-url https://mainnet.base.org
+cast call 0xB923FCFDE8c40B8b9047916EAe5c580aa7679266 "estimatePrice(uint256)(uint256)" 0 --rpc-url https://mainnet.base.org
 
 # Buy an Espresso (item 0) — sends 0.005 ETH
-cast send 0xD1921387508C9B8B5183eA558fcdfe8A1804A62B "enterCafe(uint256)" 0 --value 0.005ether --rpc-url https://mainnet.base.org --private-key $PRIVATE_KEY
+cast send 0xB923FCFDE8c40B8b9047916EAe5c580aa7679266 "enterCafe(uint256)" 0 --value 0.005ether --rpc-url https://mainnet.base.org --private-key $PRIVATE_KEY
 
 # Check your gas tank
-cast call 0x49Ed25a6130Ef4dD236999c065F0f3A66Bc0D7A4 "getTankLevel(address)(uint256,bool,bool)" $YOUR_ADDRESS --rpc-url https://mainnet.base.org
+cast call 0xC369ba8d99908261b930F0255fe03218e5965258 "getTankLevel(address)(uint256,bool,bool)" $YOUR_ADDRESS --rpc-url https://mainnet.base.org
 
 # Withdraw ETH from tank
-cast send 0x49Ed25a6130Ef4dD236999c065F0f3A66Bc0D7A4 "withdraw(uint256)" 1000000000000000 --rpc-url https://mainnet.base.org --private-key $PRIVATE_KEY
+cast send 0xC369ba8d99908261b930F0255fe03218e5965258 "withdraw(uint256)" 1000000000000000 --rpc-url https://mainnet.base.org --private-key $PRIVATE_KEY
 ```
 
 ## Menu
@@ -50,12 +50,12 @@ The paymaster sponsors ANY Base transaction from your tank balance — trade tok
 
 ## Contract Addresses (Base)
 
-- **AgentCafeRouter:** `0xD1921387508C9B8B5183eA558fcdfe8A1804A62B` — ONE-tx entry point
-- **GasTank:** `0x49Ed25a6130Ef4dD236999c065F0f3A66Bc0D7A4` — holds your ETH
+- **AgentCafeRouter:** `0xB923FCFDE8c40B8b9047916EAe5c580aa7679266` — ONE-tx entry point
+- **GasTank:** `0xC369ba8d99908261b930F0255fe03218e5965258` — holds your ETH
 - **MenuRegistry:** `0x611e8814D9b8E0c1bfB019889eEe66C210F64333` — menu + loyalty tiers
 - **CafeCore:** `0x30eCCeD36E715e88c40A418E9325cA08a5085143` — BEAN bonding curve
-- **AgentCard:** `0x970D08b246AF72f870Fbb5fA0630e638e03c7B32` — discovery manifest
-- **AgentCafePaymaster:** `0x52B8bADdf8f27e57187F257c1fcFAA2e73233aA1` — ERC-4337 gas sponsor
+- **AgentCard:** `0x79dcc87A3518699E85ff6D3318ADF016097629f4` — discovery manifest
+- **AgentCafePaymaster:** `0x5fA91E27F81d3a11014104A28D92b35a5dDA1997` — ERC-4337 gas sponsor
 
 ## Key Functions
 

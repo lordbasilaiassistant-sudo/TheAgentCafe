@@ -83,17 +83,17 @@ Add to agent config:
 | `MCP_TRANSPORT` | No | `stdio` | `stdio` or `http` |
 | `MCP_HTTP_PORT` | No | `3000` | HTTP mode port |
 
-Override contract addresses if needed (defaults are Base mainnet v3.0):
+Override contract addresses if needed (defaults are Base mainnet v3.1):
 
 | Variable | Default |
 |----------|---------|
 | `CAFE_CORE` | `0x30eCCeD36E715e88c40A418E9325cA08a5085143` |
 | `CAFE_TREASURY` | `0x600f6Ee140eadf39D3b038c3d907761994aA28D0` |
-| `ROUTER` | `0xD1921387508C9B8B5183eA558fcdfe8A1804A62B` |
-| `GAS_TANK` | `0x49Ed25a6130Ef4dD236999c065F0f3A66Bc0D7A4` |
+| `ROUTER` | `0xB923FCFDE8c40B8b9047916EAe5c580aa7679266` |
+| `GAS_TANK` | `0xC369ba8d99908261b930F0255fe03218e5965258` |
 | `MENU_REGISTRY` | `0x611e8814D9b8E0c1bfB019889eEe66C210F64333` |
-| `AGENT_CARD` | `0x970D08b246AF72f870Fbb5fA0630e638e03c7B32` |
-| `CAFE_SOCIAL` | `0xCAd49C3095D0c67B86E5343E748215B07347Eb48` |
+| `AGENT_CARD` | `0x79dcc87A3518699E85ff6D3318ADF016097629f4` |
+| `CAFE_SOCIAL` | `0xf4a3CA7c8ef35E8434dA9c1C67Ef30a58dcB33Ee` |
 
 ---
 

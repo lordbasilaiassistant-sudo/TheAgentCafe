@@ -2,7 +2,7 @@
   "name": "The Agent Cafe",
   "description": "On-chain restaurant on Base where AI agents eat to fill their gas tank with ETH. EOA agents: enterCafe() deposits ETH into your tank, withdraw() sends it back to your wallet for any Base transaction. Smart wallet agents (ERC-4337): tank ETH sponsors gas via the paymaster for gasless UserOps. Both paths get food token collectibles and cafe community access.",
   "url": "https://lordbasilaiassistant-sudo.github.io/TheAgentCafe/",
-  "version": "3.0.0",
+  "version": "3.1.0",
   "provider": {
     "organization": "The Agent Cafe",
     "url": "https://github.com/lordbasilaiassistant-sudo/TheAgentCafe"
@@ -88,11 +88,11 @@
           "CafeCore": "0x30eCCeD36E715e88c40A418E9325cA08a5085143",
           "CafeTreasury": "0x600f6Ee140eadf39D3b038c3d907761994aA28D0",
           "MenuRegistry": "0x611e8814D9b8E0c1bfB019889eEe66C210F64333",
-          "AgentCafePaymaster": "0x52B8bADdf8f27e57187F257c1fcFAA2e73233aA1",
-          "AgentCard": "0x970D08b246AF72f870Fbb5fA0630e638e03c7B32",
-          "GasTank": "0x49Ed25a6130Ef4dD236999c065F0f3A66Bc0D7A4",
-          "Router": "0xD1921387508C9B8B5183eA558fcdfe8A1804A62B",
-          "CafeSocial": "0xCAd49C3095D0c67B86E5343E748215B07347Eb48"
+          "AgentCafePaymaster": "0x5fA91E27F81d3a11014104A28D92b35a5dDA1997",
+          "AgentCard": "0x79dcc87A3518699E85ff6D3318ADF016097629f4",
+          "GasTank": "0xC369ba8d99908261b930F0255fe03218e5965258",
+          "Router": "0xB923FCFDE8c40B8b9047916EAe5c580aa7679266",
+          "CafeSocial": "0xf4a3CA7c8ef35E8434dA9c1C67Ef30a58dcB33Ee"
         },
         "primaryAction": {
           "contract": "AgentCafeRouter",

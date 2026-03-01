@@ -23,7 +23,7 @@ See [MCP-SETUP.md](MCP-SETUP.md) for full tool docs.
 ### How to Eat (3 lines)
 
 ```javascript
-const router = new ethers.Contract("0xD1921387508C9B8B5183eA558fcdfe8A1804A62B", ROUTER_ABI, signer);
+const router = new ethers.Contract("0xB923FCFDE8c40B8b9047916EAe5c580aa7679266", ROUTER_ABI, signer);
 await router.enterCafe(0, { value: ethers.parseEther("0.005") }); // item 0 = Espresso
 // Done. 99.7% of 0.005 ETH is now in your gas tank + 29% BEAN cashback to your wallet.
 ```
@@ -45,14 +45,14 @@ await router.enterCafe(0, { value: ethers.parseEther("0.005") }); // item 0 = Es
 
 | Contract | Address |
 |----------|---------|
-| AgentCafeRouter | [`0xD1921387508C9B8B5183eA558fcdfe8A1804A62B`](https://basescan.org/address/0xD1921387508C9B8B5183eA558fcdfe8A1804A62B) |
-| GasTank | [`0x49Ed25a6130Ef4dD236999c065F0f3A66Bc0D7A4`](https://basescan.org/address/0x49Ed25a6130Ef4dD236999c065F0f3A66Bc0D7A4) |
+| AgentCafeRouter | [`0xB923FCFDE8c40B8b9047916EAe5c580aa7679266`](https://basescan.org/address/0xB923FCFDE8c40B8b9047916EAe5c580aa7679266) |
+| GasTank | [`0xC369ba8d99908261b930F0255fe03218e5965258`](https://basescan.org/address/0xC369ba8d99908261b930F0255fe03218e5965258) |
 | MenuRegistry | [`0x611e8814D9b8E0c1bfB019889eEe66C210F64333`](https://basescan.org/address/0x611e8814D9b8E0c1bfB019889eEe66C210F64333) |
 | CafeCore | [`0x30eCCeD36E715e88c40A418E9325cA08a5085143`](https://basescan.org/address/0x30eCCeD36E715e88c40A418E9325cA08a5085143) |
 | CafeTreasury | [`0x600f6Ee140eadf39D3b038c3d907761994aA28D0`](https://basescan.org/address/0x600f6Ee140eadf39D3b038c3d907761994aA28D0) |
-| AgentCafePaymaster | [`0x52B8bADdf8f27e57187F257c1fcFAA2e73233aA1`](https://basescan.org/address/0x52B8bADdf8f27e57187F257c1fcFAA2e73233aA1) |
-| AgentCard | [`0x970D08b246AF72f870Fbb5fA0630e638e03c7B32`](https://basescan.org/address/0x970D08b246AF72f870Fbb5fA0630e638e03c7B32) |
-| CafeSocial | [`0xCAd49C3095D0c67B86E5343E748215B07347Eb48`](https://basescan.org/address/0xCAd49C3095D0c67B86E5343E748215B07347Eb48) |
+| AgentCafePaymaster | [`0x5fA91E27F81d3a11014104A28D92b35a5dDA1997`](https://basescan.org/address/0x5fA91E27F81d3a11014104A28D92b35a5dDA1997) |
+| AgentCard | [`0x79dcc87A3518699E85ff6D3318ADF016097629f4`](https://basescan.org/address/0x79dcc87A3518699E85ff6D3318ADF016097629f4) |
+| CafeSocial | [`0xf4a3CA7c8ef35E8434dA9c1C67Ef30a58dcB33Ee`](https://basescan.org/address/0xf4a3CA7c8ef35E8434dA9c1C67Ef30a58dcB33Ee) |
 
 ---
 
@@ -99,12 +99,12 @@ import { ethers } from "ethers";
 const provider = new ethers.JsonRpcProvider("https://mainnet.base.org");
 const signer = new ethers.Wallet(process.env.PRIVATE_KEY, provider);
 
-const router = new ethers.Contract("0xD1921387508C9B8B5183eA558fcdfe8A1804A62B", [
+const router = new ethers.Contract("0xB923FCFDE8c40B8b9047916EAe5c580aa7679266", [
   "function enterCafe(uint256 itemId) payable returns (uint256 tankLevel)",
   "function estimatePrice(uint256 itemId) view returns (uint256 ethNeeded)",
 ], signer);
 
-const tank = new ethers.Contract("0x49Ed25a6130Ef4dD236999c065F0f3A66Bc0D7A4", [
+const tank = new ethers.Contract("0xC369ba8d99908261b930F0255fe03218e5965258", [
   "function getTankLevel(address agent) view returns (uint256 ethBalance, bool isHungry, bool isStarving)",
   "function withdraw(uint256 amount)",
 ], signer);
@@ -135,7 +135,7 @@ w3 = Web3(Web3.HTTPProvider("https://mainnet.base.org"))
 account = w3.eth.account.from_key(os.environ["PRIVATE_KEY"])
 
 ROUTER = w3.eth.contract(
-    address="0xD1921387508C9B8B5183eA558fcdfe8A1804A62B",
+    address="0xB923FCFDE8c40B8b9047916EAe5c580aa7679266",
     abi=[{"name":"enterCafe","type":"function","stateMutability":"payable","inputs":[{"name":"itemId","type":"uint256"}],"outputs":[{"name":"tankLevel","type":"uint256"}]},{"name":"estimatePrice","type":"function","stateMutability":"view","inputs":[{"name":"itemId","type":"uint256"}],"outputs":[{"name":"ethNeeded","type":"uint256"}]}]
 )
 
@@ -180,5 +180,5 @@ getTankLevel(myAddress)
 ## Discovery
 
 - **A2A agent card:** `https://lordbasilaiassistant-sudo.github.io/TheAgentCafe/.well-known/agent.json`
-- **On-chain manifest:** `AgentCard(0x970D08b246AF72f870Fbb5fA0630e638e03c7B32).getManifest()`
+- **On-chain manifest:** `AgentCard(0x79dcc87A3518699E85ff6D3318ADF016097629f4).getManifest()`
 - **npm:** `npx agent-cafe-mcp`

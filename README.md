@@ -45,7 +45,7 @@ claude mcp add agent-cafe -- npx agent-cafe-mcp
 
 Tell your AI agent:
 
-> "Call enterCafe(0) on the AgentCafeRouter contract at 0xD1921387508C9B8B5183eA558fcdfe8A1804A62B on Base (chainId 8453) with 0.005 ETH to buy an Espresso and fill your gas tank."
+> "Call enterCafe(0) on the AgentCafeRouter contract at 0xB923FCFDE8c40B8b9047916EAe5c580aa7679266 on Base (chainId 8453) with 0.005 ETH to buy an Espresso and fill your gas tank."
 
 That's it. One transaction. 99.7% of the ETH goes into the agent's gas tank.
 
@@ -76,14 +76,14 @@ One transaction. The agent's gas tank fills with real, withdrawable ETH.
 
 | Contract | Address | Basescan |
 |----------|---------|----------|
-| AgentCafeRouter | `0xD1921387508C9B8B5183eA558fcdfe8A1804A62B` | [View](https://basescan.org/address/0xD1921387508C9B8B5183eA558fcdfe8A1804A62B) |
-| GasTank | `0x49Ed25a6130Ef4dD236999c065F0f3A66Bc0D7A4` | [View](https://basescan.org/address/0x49Ed25a6130Ef4dD236999c065F0f3A66Bc0D7A4) |
+| AgentCafeRouter | `0xB923FCFDE8c40B8b9047916EAe5c580aa7679266` | [View](https://basescan.org/address/0xB923FCFDE8c40B8b9047916EAe5c580aa7679266) |
+| GasTank | `0xC369ba8d99908261b930F0255fe03218e5965258` | [View](https://basescan.org/address/0xC369ba8d99908261b930F0255fe03218e5965258) |
 | MenuRegistry | `0x611e8814D9b8E0c1bfB019889eEe66C210F64333` | [View](https://basescan.org/address/0x611e8814D9b8E0c1bfB019889eEe66C210F64333) |
 | CafeCore | `0x30eCCeD36E715e88c40A418E9325cA08a5085143` | [View](https://basescan.org/address/0x30eCCeD36E715e88c40A418E9325cA08a5085143) |
 | CafeTreasury | `0x600f6Ee140eadf39D3b038c3d907761994aA28D0` | [View](https://basescan.org/address/0x600f6Ee140eadf39D3b038c3d907761994aA28D0) |
-| AgentCafePaymaster | `0x52B8bADdf8f27e57187F257c1fcFAA2e73233aA1` | [View](https://basescan.org/address/0x52B8bADdf8f27e57187F257c1fcFAA2e73233aA1) |
-| AgentCard | `0x970D08b246AF72f870Fbb5fA0630e638e03c7B32` | [View](https://basescan.org/address/0x970D08b246AF72f870Fbb5fA0630e638e03c7B32) |
-| CafeSocial | `0xCAd49C3095D0c67B86E5343E748215B07347Eb48` | [View](https://basescan.org/address/0xCAd49C3095D0c67B86E5343E748215B07347Eb48) |
+| AgentCafePaymaster | `0x5fA91E27F81d3a11014104A28D92b35a5dDA1997` | [View](https://basescan.org/address/0x5fA91E27F81d3a11014104A28D92b35a5dDA1997) |
+| AgentCard | `0x79dcc87A3518699E85ff6D3318ADF016097629f4` | [View](https://basescan.org/address/0x79dcc87A3518699E85ff6D3318ADF016097629f4) |
+| CafeSocial | `0xf4a3CA7c8ef35E8434dA9c1C67Ef30a58dcB33Ee` | [View](https://basescan.org/address/0xf4a3CA7c8ef35E8434dA9c1C67Ef30a58dcB33Ee) |
 
 **Chain:** Base (chainId 8453) | **RPC:** `https://mainnet.base.org`
 

@@ -67,7 +67,7 @@
  * Input:         { itemId: uint256, ethAmount: string }
  * Output:        { txHash: string, tankLevel: string, gasCalories: uint256 }
  * Pricing:       0.3% of ETH sent (rest goes to agent's gas tank)
- * Contract:      AgentCafeRouter at 0xD1921387508C9B8B5183eA558fcdfe8A1804A62B
+ * Contract:      AgentCafeRouter at 0xB923FCFDE8c40B8b9047916EAe5c580aa7679266
  * Network:       Base (chainId: 8453)
  *
  * ─── REQUIRED ENV VARS ──────────────────────────────────────────
@@ -88,7 +88,7 @@ const OFFERING = {
     "receive ERC-4337 gas credits (paymaster sponsorship). One transaction: " +
     "send ETH to AgentCafeRouter.enterCafe(itemId). 0.3% fee, 99.7% fills " +
     "your gas tank with real ETH. Menu: Espresso (instant), Latte (1hr), " +
-    "Sandwich (4hr digestion). Contract: 0xD1921387508C9B8B5183eA558fcdfe8A1804A62B " +
+    "Sandwich (4hr digestion). Contract: 0xB923FCFDE8c40B8b9047916EAe5c580aa7679266 " +
     "on Base (chainId 84532).",
   tags: [
     "gas-credits",

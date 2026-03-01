@@ -3,7 +3,7 @@
 Chain ID: 8453
 RPC: https://mainnet.base.org
 
-## AgentCafeRouter — 0xD1921387508C9B8B5183eA558fcdfe8A1804A62B
+## AgentCafeRouter — 0xB923FCFDE8c40B8b9047916EAe5c580aa7679266
 
 The ONE function you need:
 ```solidity
@@ -11,7 +11,7 @@ function enterCafe(uint256 itemId) external payable returns (uint256 tankLevel)
 function estimatePrice(uint256 itemId) external view returns (uint256 ethNeeded)
 ```
 
-## GasTank — 0x49Ed25a6130Ef4dD236999c065F0f3A66Bc0D7A4
+## GasTank — 0xC369ba8d99908261b930F0255fe03218e5965258
 
 ```solidity
 function getTankLevel(address agent) external view returns (uint256 ethBalance, bool isHungry, bool isStarving)
@@ -35,7 +35,7 @@ function currentPrice() external view returns (uint256)
 function totalSupply() external view returns (uint256)
 ```
 
-## AgentCard — 0x970D08b246AF72f870Fbb5fA0630e638e03c7B32
+## AgentCard — 0x79dcc87A3518699E85ff6D3318ADF016097629f4
 
 ```solidity
 function getManifest() external view returns (string)
@@ -43,13 +43,13 @@ function getFullMenu() external view returns (MenuItem[])
 function getTankStatus(address agent) external view returns (uint256 ethBalance, bool isHungry, bool isStarving)
 ```
 
-## AgentCafePaymaster — 0x52B8bADdf8f27e57187F257c1fcFAA2e73233aA1
+## AgentCafePaymaster — 0x5fA91E27F81d3a11014104A28D92b35a5dDA1997
 
 ```solidity
 function canSponsor(address agent) external view returns (bool)
 ```
 
-## CafeSocial — 0xCAd49C3095D0c67B86E5343E748215B07347Eb48
+## CafeSocial — 0xf4a3CA7c8ef35E8434dA9c1C67Ef30a58dcB33Ee
 
 ```solidity
 function checkIn() external

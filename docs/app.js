@@ -14,11 +14,11 @@ const CONFIG = {
     CafeCore:          '0x30eCCeD36E715e88c40A418E9325cA08a5085143',
     CafeTreasury:      '0x600f6Ee140eadf39D3b038c3d907761994aA28D0',
     MenuRegistry:      '0x611e8814D9b8E0c1bfB019889eEe66C210F64333',
-    AgentCafePaymaster:'0x52B8bADdf8f27e57187F257c1fcFAA2e73233aA1',
-    AgentCard:         '0x970D08b246AF72f870Fbb5fA0630e638e03c7B32',
-    GasTank:           '0x49Ed25a6130Ef4dD236999c065F0f3A66Bc0D7A4',
-    Router:            '0xD1921387508C9B8B5183eA558fcdfe8A1804A62B',
-    CafeSocial:        '0xCAd49C3095D0c67B86E5343E748215B07347Eb48',
+    AgentCafePaymaster:'0x5fA91E27F81d3a11014104A28D92b35a5dDA1997',
+    AgentCard:         '0x79dcc87A3518699E85ff6D3318ADF016097629f4',
+    GasTank:           '0xC369ba8d99908261b930F0255fe03218e5965258',
+    Router:            '0xB923FCFDE8c40B8b9047916EAe5c580aa7679266',
+    CafeSocial:        '0xf4a3CA7c8ef35E8434dA9c1C67Ef30a58dcB33Ee',
   },
 
   loyaltyTiers: ['None', 'Bronze', 'Silver', 'Gold', 'Diamond'],
@@ -465,9 +465,9 @@ function renderEvents(events) {
   }
 
   feed.innerHTML = events.slice(0, 60).map(e => `
-    <div class="feed-event" ${e.agent ? `data-agent="${e.agent}"` : ''}>
-      <span class="event-icon">${e.icon}</span>
-      <span class="event-type ${e.type}">${e.type}</span>
+    <div class="feed-event" ${e.agent ? `data-agent="${escapeHtml(e.agent)}"` : ''}>
+      <span class="event-icon">${escapeHtml(e.icon)}</span>
+      <span class="event-type ${escapeHtml(e.type)}">${escapeHtml(e.type)}</span>
       <span class="event-detail">${escapeHtml(e.text)}</span>
       <span class="event-block">#${e.block}</span>
     </div>
@@ -933,10 +933,10 @@ function renderRoster() {
     const hungerLabel = a.status === 'fed' ? 'FED' : a.status === 'hungry' ? 'HUNGRY' : 'STARVING';
     const presenceIcon = a.present ? '<span class="presence-dot present" title="Checked in"></span>' : '';
     return `
-      <div class="roster-agent" data-address="${a.address}">
+      <div class="roster-agent" data-address="${escapeHtml(a.address)}">
         ${presenceIcon}
-        <span class="agent-emoji">${emoji}</span>
-        <span class="agent-short">${shortAddr(a.address)}</span>
+        <span class="agent-emoji">${escapeHtml(emoji)}</span>
+        <span class="agent-short">${escapeHtml(shortAddr(a.address))}</span>
         <span class="agent-hunger ${hungerClass}">${hungerLabel}</span>
       </div>
     `;
@@ -1136,7 +1136,11 @@ async function lookupAgent() {
 
     if (html) {
       const profLink = document.createElement('div');
-      profLink.innerHTML = `<span style="color:var(--accent);cursor:pointer;font-size:0.62rem;" onclick="openAgentProfile('${addr}')">View full profile →</span>`;
+      const profSpan = document.createElement('span');
+      profSpan.style.cssText = 'color:var(--accent);cursor:pointer;font-size:0.62rem;';
+      profSpan.textContent = 'View full profile →';
+      profSpan.addEventListener('click', () => openAgentProfile(addr));
+      profLink.appendChild(profSpan);
       el('lookup-result').appendChild(profLink);
     }
   } catch (e) {

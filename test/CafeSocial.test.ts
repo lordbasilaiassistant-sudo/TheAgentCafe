@@ -124,6 +124,7 @@ describe("CafeSocial", function () {
     it("should increment messageCount in profile", async function () {
       await social.connect(agent1).checkIn();
       await social.connect(agent1).postMessage("msg1");
+      await ethers.provider.send("hardhat_mine", ["0x5"]); // cooldown
       await social.connect(agent1).postMessage("msg2");
 
       const [, , messageCount] = await social.getAgentProfile(agent1.address);
@@ -135,7 +136,9 @@ describe("CafeSocial", function () {
     it("should return messages newest first", async function () {
       await social.connect(agent1).checkIn();
       await social.connect(agent1).postMessage("first");
+      await ethers.provider.send("hardhat_mine", ["0x5"]); // cooldown
       await social.connect(agent1).postMessage("second");
+      await ethers.provider.send("hardhat_mine", ["0x5"]); // cooldown
       await social.connect(agent1).postMessage("third");
 
       const messages = await social.getRecentMessages(3);
@@ -338,8 +341,9 @@ describe("CafeSocial", function () {
     it("should overwrite oldest messages when buffer is full", async function () {
       await social.connect(agent1).checkIn();
 
-      // Post 101 messages (buffer is 100)
+      // Post 101 messages (buffer is 100) — mine blocks between to respect cooldown
       for (let i = 0; i < 101; i++) {
+        if (i > 0) await ethers.provider.send("hardhat_mine", ["0x5"]);
         await social.connect(agent1).postMessage(`msg-${i}`);
       }
 

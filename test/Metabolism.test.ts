@@ -340,12 +340,11 @@ describe("Metabolism & Digestion System", function () {
       await gasTank.depositWithDigestion(overwriteAgent.address, 0, 20, { value: 2000n });
 
       // After settle: rate was 100/block, 5+1 blocks passed = 600 released from old
-      // Remaining 400 dust flushed to tank
-      // So tank should have 1000 (all of first deposit settled+flushed)
-      // digestingBalance should be exactly 2000 (fresh second deposit)
-      expect(await gasTank.digestingBalance(overwriteAgent.address)).to.equal(2000n);
-      // tankBalance = settled portion + dust flush = 1000
-      expect(await gasTank.tankBalance(overwriteAgent.address)).to.equal(1000n);
+      // Remaining 400 is merged with new 2000 deposit (no instant flush)
+      // digestingBalance = 400 (old remainder) + 2000 (new) = 2400
+      expect(await gasTank.digestingBalance(overwriteAgent.address)).to.equal(2400n);
+      // tankBalance = only the settled portion from old digestion = 600
+      expect(await gasTank.tankBalance(overwriteAgent.address)).to.equal(600n);
     });
 
     it("should not lose ETH across two deposits with different schedules", async function () {

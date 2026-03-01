@@ -19,6 +19,9 @@ contract CafeSocial {
     /// @notice Maximum number of agents tracked in the presence array
     uint256 public constant MAX_PRESENT_AGENTS = 100;
 
+    /// @notice Minimum blocks between messages per agent (~10s at 2s blocks)
+    uint256 public constant MESSAGE_COOLDOWN = 5;
+
     struct ChatMessage {
         address sender;
         string message;
@@ -44,6 +47,9 @@ contract CafeSocial {
     /// @notice Tracked present agents (addresses that have checked in)
     address[] private _presentAgents;
     mapping(address => uint256) private _presentIndex; // 1-indexed (0 = not in array)
+
+    /// @notice Last block an agent posted a message (for rate limiting)
+    mapping(address => uint256) private _lastMessageBlock;
 
     // --- Events ---
 
@@ -90,12 +96,17 @@ contract CafeSocial {
         emit AgentCheckedIn(msg.sender, block.number);
     }
 
-    /// @notice Post a chat message. Must be checked in.
+    /// @notice Post a chat message. Must be checked in. Rate limited.
     /// @param message The message to post (max 280 bytes)
     function postMessage(string calldata message) external onlyCheckedIn {
         uint256 len = bytes(message).length;
         require(len > 0, "Empty message");
         require(len <= MAX_MESSAGE_LENGTH, "Message too long");
+
+        // Rate limit: 1 message per MESSAGE_COOLDOWN blocks per agent
+        uint256 lastMsg = _lastMessageBlock[msg.sender];
+        require(lastMsg == 0 || block.number >= lastMsg + MESSAGE_COOLDOWN, "Message cooldown active");
+        _lastMessageBlock[msg.sender] = block.number;
 
         _messages[messageWriteIndex] = ChatMessage({
             sender: msg.sender,

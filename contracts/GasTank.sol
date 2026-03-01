@@ -91,15 +91,10 @@ contract GasTank is ReentrancyGuard, Ownable {
 
         tankBalance[agent] += instantAmount;
 
-        // Flush any remaining dust from previous digestion to tank (H-2 fix)
-        if (digestingBalance[agent] > 0) {
-            tankBalance[agent] += digestingBalance[agent];
-            digestingBalance[agent] = 0;
-        }
-
-        // Start fresh digestion for the new deposit
-        digestingBalance[agent] = digestAmount;
-        digestRatePerBlock[agent] = digestAmount / digestionBlocks;
+        // Merge remaining old digestion with new deposit (no instant flush)
+        uint256 totalDigesting = digestingBalance[agent] + digestAmount;
+        digestingBalance[agent] = totalDigesting;
+        digestRatePerBlock[agent] = totalDigesting / digestionBlocks;
         digestionEndBlock[agent] = block.number + digestionBlocks;
         lastDigestBlock[agent] = block.number;
 
@@ -194,7 +189,8 @@ contract GasTank is ReentrancyGuard, Ownable {
     ) {
         uint256 pending = _pendingDigestion(agent);
         ethBalance = tankBalance[agent] + pending;
-        isStarving = ethBalance == 0 && (digestingBalance[agent] - pending) == 0;
+        uint256 remainDigesting = digestingBalance[agent] > pending ? digestingBalance[agent] - pending : 0;
+        isStarving = ethBalance == 0 && remainDigesting == 0;
         isHungry = ethBalance < HUNGRY_THRESHOLD;
     }
 
