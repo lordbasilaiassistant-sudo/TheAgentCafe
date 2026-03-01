@@ -220,6 +220,120 @@ describe("CafeSocial", function () {
     });
   });
 
+  describe("presence array cap (MAX_PRESENT_AGENTS = 100)", function () {
+    it("should allow up to 100 unique agents to check in", async function () {
+      const signers = await ethers.getSigners();
+      // We need 100 signers — Hardhat default provides 20, so we'll test with what we have
+      const count = Math.min(signers.length, 100);
+      for (let i = 0; i < count; i++) {
+        await social.connect(signers[i]).checkIn();
+      }
+      const activeCount = await social.getActiveAgentCount();
+      expect(activeCount).to.equal(count);
+    });
+
+    it("should evict expired agent when array is full", async function () {
+      // Deploy fresh contract and fill with 100 agents using CREATE2-style approach
+      // Since Hardhat only gives ~20 signers, we'll use a smaller-scale simulation
+      // by testing the logic with available signers + time expiry
+
+      const signers = await ethers.getSigners();
+
+      // Check in all available signers
+      for (let i = 0; i < signers.length; i++) {
+        await social.connect(signers[i]).checkIn();
+      }
+
+      // Expire all check-ins
+      await mine(1201);
+
+      // Now none are present
+      expect(await social.getActiveAgentCount()).to.equal(0);
+
+      // But array still has entries — re-check-in should not grow the array
+      // (they already have _presentIndex set)
+      await social.connect(signers[0]).checkIn();
+      expect(await social.getActiveAgentCount()).to.equal(1);
+    });
+
+    it("should revert when cafe is full and no expired slots", async function () {
+      // We need exactly MAX_PRESENT_AGENTS (100) active agents with no expired slots
+      // Since Hardhat default has ~20 signers, we deploy a helper to test with wallets
+      // Instead, we test the revert path by deploying with a modified scenario:
+      // Fill array, keep all active, try to add new agent
+
+      // This test requires 101 distinct addresses. We'll generate wallets.
+      const wallets: any[] = [];
+      const provider = ethers.provider;
+      const [funder] = await ethers.getSigners();
+
+      for (let i = 0; i < 101; i++) {
+        const wallet = ethers.Wallet.createRandom().connect(provider);
+        wallets.push(wallet);
+        // Fund each wallet with enough for gas
+        await funder.sendTransaction({
+          to: wallet.address,
+          value: ethers.parseEther("0.01"),
+        });
+      }
+
+      // Check in 100 agents
+      for (let i = 0; i < 100; i++) {
+        await social.connect(wallets[i]).checkIn();
+      }
+
+      expect(await social.getActiveAgentCount()).to.equal(100);
+
+      // 101st agent should revert — all 100 are still active
+      await expect(
+        social.connect(wallets[100]).checkIn()
+      ).to.be.revertedWith("Cafe is full -- try again later");
+    });
+
+    it("should evict expired agent and seat new agent when full", async function () {
+      const wallets: any[] = [];
+      const provider = ethers.provider;
+      const [funder] = await ethers.getSigners();
+
+      for (let i = 0; i < 101; i++) {
+        const wallet = ethers.Wallet.createRandom().connect(provider);
+        wallets.push(wallet);
+        await funder.sendTransaction({
+          to: wallet.address,
+          value: ethers.parseEther("0.01"),
+        });
+      }
+
+      // Check in 100 agents
+      for (let i = 0; i < 100; i++) {
+        await social.connect(wallets[i]).checkIn();
+      }
+
+      // Expire all check-ins
+      await mine(1201);
+      expect(await social.getActiveAgentCount()).to.equal(0);
+
+      // Now agent 100 should be able to check in by evicting an expired slot
+      await social.connect(wallets[100]).checkIn();
+      expect(await social.getActiveAgentCount()).to.equal(1);
+
+      const present = await social.getPresentAgents();
+      expect(present.length).to.equal(1);
+      expect(present[0]).to.equal(wallets[100].address);
+    });
+
+    it("should not duplicate agent already in array on re-check-in", async function () {
+      await social.connect(agent1).checkIn();
+      await social.connect(agent1).checkIn();
+      await social.connect(agent1).checkIn();
+
+      const present = await social.getPresentAgents();
+      // Should only appear once
+      expect(present.length).to.equal(1);
+      expect(present[0]).to.equal(agent1.address);
+    });
+  });
+
   describe("ring buffer overflow", function () {
     it("should overwrite oldest messages when buffer is full", async function () {
       await social.connect(agent1).checkIn();

@@ -20,6 +20,9 @@ const CONFIG = {
     CafeSocial:        '0x0C3EE6275D9b57c91838DdB6DD788b28553C6776',
   },
 
+  // Loyalty tier labels
+  loyaltyTiers: ['None', 'Bronze', 'Silver', 'Gold', 'Diamond'],
+
   itemNames: ['Espresso Shot', 'Latte', 'Agent Sandwich'],
   itemIcons: ['☕', '🥛', '🥪'],
 
@@ -47,6 +50,7 @@ const ABI = {
   GasTank: [
     'function tankBalance(address) view returns (uint256)',
     'function getTankLevel(address agent) view returns (uint256 ethBalance, bool isHungry, bool isStarving)',
+    'function getDigestionStatus(address agent) view returns (uint256 available, uint256 digesting, uint256 nextReleaseBlock, uint256 totalReleases)',
     'function totalCredited() view returns (uint256)',
     'event Deposited(address indexed agent, uint256 amount, uint256 newBalance)',
     'event Withdrawn(address indexed agent, uint256 amount, uint256 newBalance)',
@@ -56,6 +60,7 @@ const ABI = {
   MenuRegistry: [
     'function getMenu() view returns (uint256[] ids, string[] names, uint256[] costs, uint256[] calories, uint256[] digestionTimes)',
     'function getAgentStatus(address agent) view returns (uint256 availableGas, uint256 digestingGas, uint256 totalConsumed, uint256 mealCount)',
+    'function getLoyaltyTier(address agent) view returns (uint256 tier)',
     'function totalMealsServed() view returns (uint256)',
     'function totalAgentsServed() view returns (uint256)',
     'event ItemPurchased(address indexed agent, uint256 indexed itemId, uint256 quantity, uint256 beanPaid)',
@@ -75,6 +80,18 @@ const ABI = {
     'function getCafeStats() view returns (uint256 totalMeals, uint256 uniqueAgents)',
     'function getTankStatus(address agent) view returns (uint256 ethBalance, bool isHungry, bool isStarving)',
     'function getContractAddresses() view returns (address routerAddr, address gasTankAddr, address menuRegistryAddr)',
+  ],
+  CafeSocial: [
+    'function checkIn() external',
+    'function postMessage(string message) external',
+    'function getPresentAgents() view returns (address[])',
+    'function getActiveAgentCount() view returns (uint256)',
+    'function getRecentMessages(uint256 count) view returns (address[] agents, string[] messages, uint256[] blockNumbers)',
+    'function getAgentProfile(address agent) view returns (uint256 checkInCount, uint256 messageCount, uint256 lastCheckIn, uint256 socializeCount)',
+    'function socializeWith(address other) external',
+    'event AgentCheckedIn(address indexed agent, uint256 blockNumber)',
+    'event ChatMessagePosted(address indexed agent, string message, uint256 blockNumber)',
+    'event AgentSocialized(address indexed agent1, address indexed agent2)',
   ],
 };
 
@@ -348,6 +365,51 @@ async function loadRecentEvents() {
       } catch {}
     }
 
+    // CafeSocial events
+    if (contracts.CafeSocial) {
+      try {
+        const checkIns = await contracts.CafeSocial.queryFilter(
+          contracts.CafeSocial.filters.AgentCheckedIn(), fromBlock
+        );
+        for (const e of checkIns) {
+          const agent = e.args[0];
+          events.push({
+            type: 'checkin', block: e.blockNumber, agent,
+            icon: '🚪',
+            text: `${shortAddr(agent)} checked in to the cafe`,
+          });
+          addAgentToScene(agent, 'fed', null, e.blockNumber);
+        }
+
+        const chatMsgs = await contracts.CafeSocial.queryFilter(
+          contracts.CafeSocial.filters.ChatMessagePosted(), fromBlock
+        );
+        for (const e of chatMsgs) {
+          const agent = e.args[0];
+          const message = e.args[1];
+          events.push({
+            type: 'chat', block: e.blockNumber, agent,
+            icon: '💬',
+            text: `${shortAddr(agent)}: ${message}`,
+            chatMessage: message,
+          });
+        }
+
+        const socializes = await contracts.CafeSocial.queryFilter(
+          contracts.CafeSocial.filters.AgentSocialized(), fromBlock
+        );
+        for (const e of socializes) {
+          const agent1 = e.args[0];
+          const agent2 = e.args[1];
+          events.push({
+            type: 'social', block: e.blockNumber, agent: agent1,
+            icon: '🤝',
+            text: `${shortAddr(agent1)} socialized with ${shortAddr(agent2)}`,
+          });
+        }
+      } catch {}
+    }
+
     // De-duplicate and sort
     const seen = new Set();
     const unique = events.filter(e => {
@@ -391,12 +453,17 @@ async function loadRecentEvents() {
       // Update caption from latest event
       if (unique[0]) setCaption(unique[0].text);
 
-      // Populate chat from real on-chain events
-      populateChatFromEvents(unique);
+      // Populate chat: prefer real ChatMessagePosted events, fall back to activity events
+      const chatEvents = unique.filter(e => e.type === 'chat');
+      if (chatEvents.length > 0) {
+        populateChatFromChatMessages(chatEvents);
+      } else {
+        populateChatFromEvents(unique);
+      }
     }
 
-    // Refresh roster
-    renderRoster();
+    // Refresh roster — prefer CafeSocial.getPresentAgents() for live presence
+    await refreshRoster();
 
   } catch (e) {
     console.warn('Event load:', e.message);
@@ -455,6 +522,71 @@ function populateChatFromEvents(events) {
   while (chatEl.children.length > 40) {
     chatEl.removeChild(chatEl.firstChild);
   }
+}
+
+function populateChatFromChatMessages(chatEvents) {
+  const chatEl = el('chat-messages');
+  if (!chatEl) return;
+
+  const newEvents = chatEvents.filter(e => e.block && !chatRenderedBlocks.has(`${e.block}-${e.chatMessage}`));
+  if (newEvents.length === 0) return;
+
+  // Clear placeholder
+  const placeholder = chatEl.querySelector('.chat-msg.system');
+  if (placeholder && chatRenderedBlocks.size === 0) placeholder.remove();
+
+  const toAdd = [...newEvents].reverse();
+  for (const e of toAdd) {
+    const key = `${e.block}-${e.chatMessage}`;
+    chatRenderedBlocks.add(key);
+
+    const emoji = getAgentEmoji(e.agent);
+    const sender = shortAddr(e.agent);
+
+    const msg = document.createElement('div');
+    msg.className = 'chat-msg agent-msg';
+    msg.innerHTML = `<span class="chat-time">#${e.block}</span><span class="sender">${emoji} ${escapeHtml(sender)}</span><span class="chat-body">${escapeHtml(e.chatMessage)}</span>`;
+    if (e.agent) {
+      msg.style.cursor = 'pointer';
+      msg.addEventListener('click', () => openAgentProfile(e.agent));
+    }
+    chatEl.appendChild(msg);
+  }
+
+  chatEl.scrollTop = chatEl.scrollHeight;
+  while (chatEl.children.length > 40) {
+    chatEl.removeChild(chatEl.firstChild);
+  }
+}
+
+// ============================================================
+// Roster — prefer CafeSocial.getPresentAgents() for live data
+// ============================================================
+async function refreshRoster() {
+  if (contracts.CafeSocial) {
+    try {
+      const present = await contracts.CafeSocial.getPresentAgents();
+      if (present.length > 0) {
+        // Update agentRoster with live presence data
+        const presentSet = new Set(present.map(a => a.toLowerCase()));
+        // Add any present agents not already in roster
+        for (const addr of present) {
+          if (!agentRoster.find(a => a.address.toLowerCase() === addr.toLowerCase())) {
+            agentRoster.unshift({ address: addr, status: 'fed', itemId: null, firstSeen: lastBlock });
+          }
+        }
+        // Mark present agents
+        for (const a of agentRoster) {
+          a.present = presentSet.has(a.address.toLowerCase());
+        }
+        // Sort: present agents first
+        agentRoster.sort((a, b) => (b.present ? 1 : 0) - (a.present ? 1 : 0));
+      }
+    } catch (e) {
+      console.warn('getPresentAgents:', e.message);
+    }
+  }
+  renderRoster();
 }
 
 // ============================================================
@@ -622,8 +754,10 @@ function renderRoster() {
     const emoji = getAgentEmoji(a.address);
     const hungerClass = `hunger-${a.status}`;
     const hungerLabel = a.status === 'fed' ? 'FED' : a.status === 'hungry' ? 'HUNGRY' : 'STARVING';
+    const presenceIcon = a.present ? '<span class="presence-dot present" title="Checked in"></span>' : '';
     return `
       <div class="roster-agent" data-address="${a.address}">
+        ${presenceIcon}
         <span class="agent-emoji">${emoji}</span>
         <span class="agent-short">${shortAddr(a.address)}</span>
         <span class="agent-hunger ${hungerClass}">${hungerLabel}</span>
@@ -650,6 +784,8 @@ async function openAgentProfile(address) {
   el('profile-meals').textContent = '--';
   el('profile-credits').textContent = '--';
   el('profile-digesting').textContent = '--';
+  el('profile-loyalty').textContent = '--';
+  el('profile-digestion-status').textContent = '--';
   el('profile-tank-fill').style.width = '0%';
   el('agent-modal').classList.remove('hidden');
 
@@ -673,6 +809,32 @@ async function openAgentProfile(address) {
       el('profile-meals').textContent = Number(meals);
       el('profile-credits').textContent = Number(avail).toLocaleString();
       el('profile-digesting').textContent = Number(digesting).toLocaleString();
+
+      // Loyalty tier
+      try {
+        const tier = await contracts.MenuRegistry.getLoyaltyTier(address);
+        const tierName = CONFIG.loyaltyTiers[Number(tier)] || `Tier ${Number(tier)}`;
+        el('profile-loyalty').textContent = tierName;
+      } catch {
+        el('profile-loyalty').textContent = 'N/A';
+      }
+    }
+
+    // Digestion status from GasTank
+    if (contracts.GasTank) {
+      try {
+        const [available, digesting, nextRelease, totalReleases] = await contracts.GasTank.getDigestionStatus(address);
+        const digestingEth = parseFloat(ethers.formatEther(digesting));
+        if (digestingEth > 0) {
+          const nextBlock = Number(nextRelease);
+          const blocksLeft = nextBlock > lastBlock ? nextBlock - lastBlock : 0;
+          el('profile-digestion-status').textContent = `${digestingEth.toFixed(6)} ETH digesting (~${blocksLeft} blocks)`;
+        } else {
+          el('profile-digestion-status').textContent = 'Fully digested';
+        }
+      } catch {
+        el('profile-digestion-status').textContent = 'N/A';
+      }
     }
   } catch (e) {
     console.warn('Profile load:', e.message);

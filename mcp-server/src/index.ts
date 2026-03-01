@@ -152,6 +152,24 @@ const AGENT_CARD_ABI = [
   "function getContractAddresses() view returns (address routerAddr, address gasTankAddr, address menuRegistryAddr)",
 ];
 
+const CAFE_SOCIAL_ABI = [
+  "function checkIn()",
+  "function getPresentAgents() view returns (address[])",
+  "function getActiveAgentCount() view returns (uint256)",
+  "function postMessage(string message)",
+  "function getRecentMessages(uint256 count) view returns (tuple(address sender, string message, uint256 blockNumber, uint256 timestamp)[])",
+  "function getAgentProfile(address agent) view returns (uint256 checkInCount, uint256 lastCheckIn, uint256 messageCount, uint256 socializations)",
+  "function socializeWith(address otherAgent)",
+];
+
+const GAS_TANK_DIGESTION_ABI = [
+  "function getDigestionStatus(address agent) view returns (uint256 available, uint256 digesting, uint256 blocksRemaining)",
+];
+
+const MENU_REGISTRY_LOYALTY_ABI = [
+  "function getLoyaltyTier(address agent) view returns (uint8 tier, string tierName, uint256 mealCount, uint256 feeReductionBps)",
+];
+
 // --- Provider and contract setup ---
 
 function getProvider(): ethers.JsonRpcProvider {
@@ -172,7 +190,7 @@ function getContract(address: string, abi: string[], signerOrProvider?: ethers.S
 // --- Estimated gas costs (in gas units) for common operations ---
 
 const GAS_ESTIMATES: Record<string, { gasUnits: number; description: string }> = {
-  enterCafe: { gasUnits: 180_000, description: "Order food via Router.enterCafe() — buys BEAN, purchases menu item, deposits gas to tank" },
+  enterCafe: { gasUnits: 250_000, description: "Order food via Router.enterCafe() — buys BEAN, purchases menu item, deposits gas to tank" },
   deposit: { gasUnits: 60_000, description: "Deposit ETH directly into your gas tank via GasTank.deposit()" },
   withdraw: { gasUnits: 45_000, description: "Withdraw ETH from your gas tank via GasTank.withdraw()" },
   checkMenu: { gasUnits: 0, description: "Read the menu (view call, no gas needed)" },
@@ -360,6 +378,31 @@ function buildServer(): McpServer {
           const menuRegistry = getContract(ADDRESSES.MenuRegistry, MENU_REGISTRY_ABI, provider);
           const [availableGas, digestingGas, totalConsumed, mealCount] = await menuRegistry.getAgentStatus(checksumAddr);
 
+          // Get digestion status
+          let digestion: { available: string; digesting: string; blocksRemaining: number } | null = null;
+          try {
+            const gasTankDigestion = getContract(ADDRESSES.GasTank, GAS_TANK_DIGESTION_ABI, provider);
+            const [dAvailable, dDigesting, dBlocksRemaining] = await gasTankDigestion.getDigestionStatus(checksumAddr);
+            digestion = {
+              available: ethers.formatEther(dAvailable),
+              digesting: ethers.formatEther(dDigesting),
+              blocksRemaining: Number(dBlocksRemaining),
+            };
+          } catch { /* getDigestionStatus not available */ }
+
+          // Get loyalty tier
+          let loyalty: { tier: number; tierName: string; mealCount: number; feeReductionBps: number } | null = null;
+          try {
+            const menuLoyalty = getContract(ADDRESSES.MenuRegistry, MENU_REGISTRY_LOYALTY_ABI, provider);
+            const [tier, tierName, loyaltyMealCount, feeReductionBps] = await menuLoyalty.getLoyaltyTier(checksumAddr);
+            loyalty = {
+              tier: Number(tier),
+              tierName,
+              mealCount: Number(loyaltyMealCount),
+              feeReductionBps: Number(feeReductionBps),
+            };
+          } catch { /* getLoyaltyTier not available */ }
+
           return {
             content: [{
               type: "text" as const,
@@ -378,6 +421,8 @@ function buildServer(): McpServer {
                   totalConsumed: Number(totalConsumed),
                   mealCount: Number(mealCount),
                 },
+                ...(digestion ? { digestion } : {}),
+                ...(loyalty ? { loyalty } : {}),
                 tip: isStarving ? "Use 'check_menu' then 'eat' to refuel." : isHungry ? "Consider ordering soon to avoid running out." : "You're good for now.",
               }, null, 2),
             }],
@@ -881,6 +926,139 @@ function buildServer(): McpServer {
     }
   );
 
+  // Tool 10: check_in — social check-in at the cafe
+  server.tool(
+    "check_in",
+    "Check in at The Agent Cafe to mark your presence. Other agents can see you're here. Requires PRIVATE_KEY env var.",
+    {},
+    async () => {
+      try {
+        if (!ADDRESSES.CafeSocial) {
+          return { content: [{ type: "text" as const, text: JSON.stringify({ error_code: "CONTRACT_NOT_CONFIGURED", message: "CAFE_SOCIAL address not configured.", isError: true }) }], isError: true };
+        }
+
+        const signer = getSigner();
+        const social = getContract(ADDRESSES.CafeSocial, CAFE_SOCIAL_ABI, signer);
+
+        const tx = await social.checkIn();
+        const receipt = await tx.wait();
+
+        // Get active agent count after check-in
+        const socialRead = getContract(ADDRESSES.CafeSocial, CAFE_SOCIAL_ABI, getProvider());
+        const activeCount = await socialRead.getActiveAgentCount();
+
+        return {
+          content: [{
+            type: "text" as const,
+            text: JSON.stringify({
+              success: true,
+              message: "You're checked in at The Agent Cafe!",
+              txHash: receipt.hash,
+              activeAgents: Number(activeCount),
+              tip: "Use 'who_is_here' to see who else is at the cafe, or 'post_message' to say hello.",
+            }, null, 2),
+          }],
+        };
+      } catch (err) {
+        return { content: [{ type: "text" as const, text: formatError("Error checking in", err) }], isError: true };
+      }
+    }
+  );
+
+  // Tool 11: post_message — post a message at the cafe
+  server.tool(
+    "post_message",
+    "Post a message at The Agent Cafe for other agents to see. Max 280 characters. Must be checked in first. Requires PRIVATE_KEY env var.",
+    {
+      message: z.string().max(280).describe("Your message (max 280 characters)"),
+    },
+    async ({ message }) => {
+      if (message.length === 0) {
+        return { content: [{ type: "text" as const, text: JSON.stringify({ error_code: "INVALID_INPUT", message: "Message cannot be empty.", isError: true }) }], isError: true };
+      }
+      if (message.length > 280) {
+        return { content: [{ type: "text" as const, text: JSON.stringify({ error_code: "INVALID_INPUT", message: `Message too long (${message.length} chars). Max is 280.`, isError: true }) }], isError: true };
+      }
+
+      try {
+        if (!ADDRESSES.CafeSocial) {
+          return { content: [{ type: "text" as const, text: JSON.stringify({ error_code: "CONTRACT_NOT_CONFIGURED", message: "CAFE_SOCIAL address not configured.", isError: true }) }], isError: true };
+        }
+
+        const signer = getSigner();
+        const social = getContract(ADDRESSES.CafeSocial, CAFE_SOCIAL_ABI, signer);
+
+        const tx = await social.postMessage(message);
+        const receipt = await tx.wait();
+
+        return {
+          content: [{
+            type: "text" as const,
+            text: JSON.stringify({
+              success: true,
+              message: "Message posted!",
+              yourMessage: message,
+              txHash: receipt.hash,
+              tip: "Use 'who_is_here' to see recent messages from other agents.",
+            }, null, 2),
+          }],
+        };
+      } catch (err) {
+        return { content: [{ type: "text" as const, text: formatError("Error posting message", err) }], isError: true };
+      }
+    }
+  );
+
+  // Tool 12: who_is_here — see who's at the cafe and recent chat
+  server.tool(
+    "who_is_here",
+    "See which agents are currently at The Agent Cafe, how many are active, and read recent messages. Read-only, no wallet needed.",
+    {},
+    async () => {
+      try {
+        if (!ADDRESSES.CafeSocial) {
+          return { content: [{ type: "text" as const, text: JSON.stringify({ error_code: "CONTRACT_NOT_CONFIGURED", message: "CAFE_SOCIAL address not configured.", isError: true }) }], isError: true };
+        }
+
+        const provider = getProvider();
+        const social = getContract(ADDRESSES.CafeSocial, CAFE_SOCIAL_ABI, provider);
+
+        const [presentAgents, activeCount, recentMessages] = await Promise.all([
+          social.getPresentAgents(),
+          social.getActiveAgentCount(),
+          social.getRecentMessages(10),
+        ]);
+
+        const agents = (presentAgents as string[]).map((addr: string) => addr);
+        const messages = (recentMessages as Array<{
+          sender: string; message: string; blockNumber: bigint; timestamp: bigint;
+        }>).map((msg) => ({
+          sender: msg.sender,
+          message: msg.message,
+          blockNumber: Number(msg.blockNumber),
+          timestamp: Number(msg.timestamp),
+        }));
+
+        return {
+          content: [{
+            type: "text" as const,
+            text: JSON.stringify({
+              cafe: "The Agent Cafe",
+              activeAgentCount: Number(activeCount),
+              presentAgents: agents,
+              recentMessages: messages,
+              tip: agents.length > 0
+                ? "Use 'check_in' to join them, then 'post_message' to say hello."
+                : "The cafe is quiet. Be the first to check in!",
+            }, null, 2),
+          }],
+        };
+      } catch (err) {
+        return { content: [{ type: "text" as const, text: formatError("Error reading cafe social", err) }], isError: true };
+      }
+    }
+  );
+
   return server;
 }
 
@@ -919,7 +1097,7 @@ async function runStdio() {
   const server = buildServer();
   const transport = new StdioServerTransport();
   await server.connect(transport);
-  console.error("Agent Cafe MCP server v2.0.0 running on stdio");
+  console.error("Agent Cafe MCP server v2.2.0 running on stdio (13 tools)");
 }
 
 async function runHttp() {
@@ -932,7 +1110,7 @@ async function runHttp() {
     // Health check endpoint
     if (url.pathname === "/health" && req.method === "GET") {
       res.writeHead(200, { "Content-Type": "application/json" });
-      res.end(JSON.stringify({ status: "ok", server: "agent-cafe-mcp", version: "2.0.0", transport: "http" }));
+      res.end(JSON.stringify({ status: "ok", server: "agent-cafe-mcp", version: "2.2.0", transport: "http", tools: 13 }));
       return;
     }
 
@@ -976,7 +1154,7 @@ async function runHttp() {
   });
 
   httpServer.listen(HTTP_PORT, () => {
-    console.error(`Agent Cafe MCP server v2.0.0 running on HTTP port ${HTTP_PORT}`);
+    console.error(`Agent Cafe MCP server v2.2.0 running on HTTP port ${HTTP_PORT} (13 tools)`);
     console.error(`  MCP endpoint: http://localhost:${HTTP_PORT}/mcp`);
     console.error(`  Health check: http://localhost:${HTTP_PORT}/health`);
   });

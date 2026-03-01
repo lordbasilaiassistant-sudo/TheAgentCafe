@@ -1284,6 +1284,14 @@ header h1 {
 .roster-agent .hunger-fed { color: var(--green); }
 .roster-agent .hunger-hungry { color: var(--yellow); }
 .roster-agent .hunger-starving { color: var(--red); }
+.roster-agent .presence-dot {
+  width: 6px; height: 6px; border-radius: 50%; display: inline-block;
+  background: var(--text-dim);
+}
+.roster-agent .presence-dot.present {
+  background: var(--green);
+  box-shadow: 0 0 4px var(--green);
+}
 
 /* ===== Status colors ===== */
 .status-fed { color: var(--green); }

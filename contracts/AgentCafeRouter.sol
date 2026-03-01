@@ -83,7 +83,7 @@ contract AgentCafeRouter is ReentrancyGuard, Ownable, IERC165 {
 
         // 1. Calculate all three portions up front (with loyalty discount)
         uint256 feeReduction = menuRegistry.getFeeReductionBps(msg.sender);
-        uint256 effectiveFeeBps = FEE_BPS - feeReduction;
+        uint256 effectiveFeeBps = feeReduction >= FEE_BPS ? 0 : FEE_BPS - feeReduction;
         uint256 fee = (msg.value * effectiveFeeBps) / BPS;
         if (feeReduction > 0) {
             uint256 saved = (msg.value * feeReduction) / BPS;

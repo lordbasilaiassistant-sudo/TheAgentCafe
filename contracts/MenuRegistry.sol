@@ -128,7 +128,9 @@ contract MenuRegistry is ERC1155, ReentrancyGuard, Ownable {
     }
 
     /// @notice Consume a menu item — burns it and credits metabolic energy
+    /// @dev Only authorized callers (router) can consume. Prevents fee bypass.
     function consume(uint256 itemId, uint256 quantity) external nonReentrant {
+        require(authorizedCallers[msg.sender], "Not authorized");
         require(balanceOf(msg.sender, itemId) >= quantity, "Not enough items");
         MenuItem memory item = menu[itemId];
 

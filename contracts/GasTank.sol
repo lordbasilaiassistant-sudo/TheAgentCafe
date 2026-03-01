@@ -23,6 +23,9 @@ contract GasTank is ReentrancyGuard, Ownable {
     /// @notice Last block at which digestion was settled for each agent
     mapping(address => uint256) public lastDigestBlock;
 
+    /// @notice Block at which digestion period ends for each agent
+    mapping(address => uint256) public digestionEndBlock;
+
     /// @notice Addresses authorized to deduct from tanks (paymaster, router)
     mapping(address => bool) public authorizedDeducters;
 
@@ -87,9 +90,16 @@ contract GasTank is ReentrancyGuard, Ownable {
 
         tankBalance[agent] += instantAmount;
 
-        // Add to existing digesting balance and recalculate rate
-        digestingBalance[agent] += digestAmount;
-        digestRatePerBlock[agent] = digestingBalance[agent] / digestionBlocks;
+        // Flush any remaining dust from previous digestion to tank (H-2 fix)
+        if (digestingBalance[agent] > 0) {
+            tankBalance[agent] += digestingBalance[agent];
+            digestingBalance[agent] = 0;
+        }
+
+        // Start fresh digestion for the new deposit
+        digestingBalance[agent] = digestAmount;
+        digestRatePerBlock[agent] = digestAmount / digestionBlocks;
+        digestionEndBlock[agent] = block.number + digestionBlocks;
         lastDigestBlock[agent] = block.number;
 
         emit DepositedWithDigestion(
@@ -185,8 +195,13 @@ contract GasTank is ReentrancyGuard, Ownable {
         uint256 blocksSince = block.number - lastDigestBlock[agent];
         if (blocksSince == 0) return 0;
 
-        released = blocksSince * digestRatePerBlock[agent];
-        if (released > digestingBalance[agent]) released = digestingBalance[agent];
+        // C-1 fix: if past digestion end, release ALL remaining (catches integer division dust)
+        if (digestionEndBlock[agent] > 0 && block.number >= digestionEndBlock[agent]) {
+            released = digestingBalance[agent];
+        } else {
+            released = blocksSince * digestRatePerBlock[agent];
+            if (released > digestingBalance[agent]) released = digestingBalance[agent];
+        }
 
         digestingBalance[agent] -= released;
         tankBalance[agent] += released;
@@ -202,6 +217,10 @@ contract GasTank is ReentrancyGuard, Ownable {
         if (digestingBalance[agent] == 0 || lastDigestBlock[agent] == 0) return 0;
         uint256 blocksSince = block.number - lastDigestBlock[agent];
         if (blocksSince == 0) return 0;
+        // C-1 fix: if past digestion end, all remaining is pending
+        if (digestionEndBlock[agent] > 0 && block.number >= digestionEndBlock[agent]) {
+            return digestingBalance[agent];
+        }
         uint256 released = blocksSince * digestRatePerBlock[agent];
         if (released > digestingBalance[agent]) released = digestingBalance[agent];
         return released;

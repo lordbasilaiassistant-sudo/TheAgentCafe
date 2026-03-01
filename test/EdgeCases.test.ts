@@ -399,10 +399,10 @@ describe("Edge Cases", function () {
       await menuRegistry.setAuthorizedCaller(deployer.address, false);
     });
 
-    it("should revert consume when agent has no items (direct call)", async function () {
+    it("should revert consume from unauthorized caller (direct call)", async function () {
       await expect(
         menuRegistry.connect(agent).consume(0, 1)
-      ).to.be.revertedWith("Not enough items");
+      ).to.be.revertedWith("Not authorized");
     });
 
     it("should revert buyItem with zero quantity", async function () {

@@ -279,6 +279,144 @@ describe("Metabolism & Digestion System", function () {
     });
   });
 
+  describe("C-1 Fix: Integer division dust recovery", function () {
+    it("should recover all 999 wei deposited over 1000 blocks (dust case)", async function () {
+      const signers = await ethers.getSigners();
+      const dustAgent = signers[12];
+      const amount = 999n; // 999 wei over 1000 blocks => rate = 0 per block
+
+      await gasTank.depositWithDigestion(dustAgent.address, 0, 1000, { value: amount });
+
+      // Rate should be 0 due to integer division (999 / 1000 = 0)
+      expect(await gasTank.digestRatePerBlock(dustAgent.address)).to.equal(0);
+      expect(await gasTank.digestingBalance(dustAgent.address)).to.equal(999n);
+
+      // Mine past the digestion end block
+      await ethers.provider.send("hardhat_mine", ["0x3E8"]); // 1000 blocks
+
+      // Settle digestion — should release ALL 999 wei despite rate=0
+      await gasTank.digest(dustAgent.address);
+
+      expect(await gasTank.digestingBalance(dustAgent.address)).to.equal(0);
+      expect(await gasTank.tankBalance(dustAgent.address)).to.equal(999n);
+    });
+
+    it("should recover dust when rate * blocks < digestingBalance", async function () {
+      const signers = await ethers.getSigners();
+      const dustAgent2 = signers[13];
+      // 1001 wei over 10 blocks => rate = 100, so 100*10 = 1000, leaving 1 wei dust
+      const amount = 1001n;
+
+      await gasTank.depositWithDigestion(dustAgent2.address, 0, 10, { value: amount });
+
+      expect(await gasTank.digestRatePerBlock(dustAgent2.address)).to.equal(100n);
+
+      // Mine past end
+      await ethers.provider.send("hardhat_mine", ["0xA"]); // 10 blocks
+
+      await gasTank.digest(dustAgent2.address);
+
+      // All 1001 wei should be in tank, none left digesting
+      expect(await gasTank.digestingBalance(dustAgent2.address)).to.equal(0);
+      expect(await gasTank.tankBalance(dustAgent2.address)).to.equal(1001n);
+    });
+  });
+
+  describe("H-2 Fix: Deposit overwrite settles old digestion", function () {
+    it("should settle first deposit before starting second", async function () {
+      const signers = await ethers.getSigners();
+      const overwriteAgent = signers[14];
+
+      // First deposit: 1000 wei, 0% instant, over 10 blocks
+      await gasTank.depositWithDigestion(overwriteAgent.address, 0, 10, { value: 1000n });
+
+      expect(await gasTank.digestingBalance(overwriteAgent.address)).to.equal(1000n);
+
+      // Mine 5 blocks (partial digestion)
+      await ethers.provider.send("hardhat_mine", ["0x5"]);
+
+      // Second deposit: 2000 wei, 0% instant, over 20 blocks
+      // This should settle old digestion first, then flush dust, then start new
+      await gasTank.depositWithDigestion(overwriteAgent.address, 0, 20, { value: 2000n });
+
+      // After settle: rate was 100/block, 5+1 blocks passed = 600 released from old
+      // Remaining 400 dust flushed to tank
+      // So tank should have 1000 (all of first deposit settled+flushed)
+      // digestingBalance should be exactly 2000 (fresh second deposit)
+      expect(await gasTank.digestingBalance(overwriteAgent.address)).to.equal(2000n);
+      // tankBalance = settled portion + dust flush = 1000
+      expect(await gasTank.tankBalance(overwriteAgent.address)).to.equal(1000n);
+    });
+
+    it("should not lose ETH across two deposits with different schedules", async function () {
+      const signers = await ethers.getSigners();
+      const safeAgent = signers[15];
+      const deposit1 = 5000n;
+      const deposit2 = 3000n;
+      const total = deposit1 + deposit2;
+
+      // First deposit
+      await gasTank.depositWithDigestion(safeAgent.address, 0, 100, { value: deposit1 });
+
+      // Mine 50 blocks
+      await ethers.provider.send("hardhat_mine", ["0x32"]);
+
+      // Second deposit
+      await gasTank.depositWithDigestion(safeAgent.address, 0, 200, { value: deposit2 });
+
+      // Mine past second deposit's end
+      await ethers.provider.send("hardhat_mine", ["0xC8"]); // 200 blocks
+
+      await gasTank.digest(safeAgent.address);
+
+      // ALL ETH from both deposits must be recoverable
+      expect(await gasTank.digestingBalance(safeAgent.address)).to.equal(0);
+      expect(await gasTank.tankBalance(safeAgent.address)).to.equal(total);
+    });
+  });
+
+  describe("End-of-digestion: all ETH moves to tankBalance", function () {
+    it("should move all digestingBalance to tank after digestion period ends", async function () {
+      const signers = await ethers.getSigners();
+      const endAgent = signers[16];
+      const amount = ethers.parseEther("0.005");
+
+      await gasTank.depositWithDigestion(endAgent.address, 5000, 50, { value: amount });
+
+      const instantPortion = amount / 2n;
+      const digestPortion = amount - instantPortion;
+
+      expect(await gasTank.tankBalance(endAgent.address)).to.equal(instantPortion);
+      expect(await gasTank.digestingBalance(endAgent.address)).to.equal(digestPortion);
+
+      // Mine well past the 50-block digestion window
+      await ethers.provider.send("hardhat_mine", ["0x64"]); // 100 blocks
+
+      await gasTank.digest(endAgent.address);
+
+      // All ETH should be in tank, zero digesting
+      expect(await gasTank.tankBalance(endAgent.address)).to.equal(amount);
+      expect(await gasTank.digestingBalance(endAgent.address)).to.equal(0);
+    });
+
+    it("should show correct status via getDigestionStatus after end", async function () {
+      const signers = await ethers.getSigners();
+      const statusAgent = signers[17];
+      const amount = 7777n;
+
+      await gasTank.depositWithDigestion(statusAgent.address, 0, 10, { value: amount });
+
+      // Mine past end
+      await ethers.provider.send("hardhat_mine", ["0x14"]); // 20 blocks
+
+      const status = await gasTank.getDigestionStatus(statusAgent.address);
+      // View should show all available, zero digesting
+      expect(status.available).to.equal(amount);
+      expect(status.digesting).to.equal(0n);
+      expect(status.blocksRemaining).to.equal(0n);
+    });
+  });
+
   describe("Withdraw settles digestion first", function () {
     it("should allow withdrawing digested ETH", async function () {
       const signers = await ethers.getSigners();

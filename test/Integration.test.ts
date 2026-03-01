@@ -165,7 +165,10 @@ describe("The Agent Cafe — Full Integration Test", function () {
     });
 
     it("should burn espresso and credit gas instantly", async function () {
+      // Authorize the agent to consume directly (M-1 fix: consume now requires authorization)
+      await menuRegistry.setAuthorizedCaller(agent.address, true);
       await menuRegistry.connect(agent).consume(0, 1);
+      await menuRegistry.setAuthorizedCaller(agent.address, false);
 
       const status = await menuRegistry.getAgentStatus(agent.address);
       expect(status.availableGas).to.equal(300_000);
@@ -356,7 +359,10 @@ describe("The Agent Cafe — Full Integration Test", function () {
       const menuAddr = await menuRegistry.getAddress();
       await cafeCore.connect(agent).approve(menuAddr, 120);
       await menuRegistry.connect(agent).buyItem(2, 1);
+      // Authorize the agent to consume directly (M-1 fix: consume now requires authorization)
+      await menuRegistry.setAuthorizedCaller(agent.address, true);
       await menuRegistry.connect(agent).consume(2, 1);
+      await menuRegistry.setAuthorizedCaller(agent.address, false);
 
       const status = await menuRegistry.getAgentStatus(agent.address);
       expect(status.digestingGas).to.be.greaterThan(0);

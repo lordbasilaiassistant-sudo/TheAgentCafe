@@ -15,6 +15,9 @@ contract CafeSocial {
     /// @notice Maximum number of messages stored in the ring buffer
     uint256 public constant MAX_STORED_MESSAGES = 100;
 
+    /// @notice Maximum number of agents tracked in the presence array
+    uint256 public constant MAX_PRESENT_AGENTS = 100;
+
     struct ChatMessage {
         address sender;
         string message;
@@ -57,6 +60,7 @@ contract CafeSocial {
     // --- Core Functions ---
 
     /// @notice Check in to the cafe. Auto-expires after CHECK_IN_WINDOW blocks.
+    /// @dev Capped at MAX_PRESENT_AGENTS. When full, expired slots are reclaimed.
     function checkIn() external {
         AgentProfile storage profile = profiles[msg.sender];
         profile.checkInCount++;
@@ -64,8 +68,22 @@ contract CafeSocial {
 
         // Add to present agents if not already tracked
         if (_presentIndex[msg.sender] == 0) {
-            _presentAgents.push(msg.sender);
-            _presentIndex[msg.sender] = _presentAgents.length; // 1-indexed
+            if (_presentAgents.length < MAX_PRESENT_AGENTS) {
+                _presentAgents.push(msg.sender);
+                _presentIndex[msg.sender] = _presentAgents.length; // 1-indexed
+            } else {
+                // Array is full — find an expired slot to reclaim
+                uint256 slot = _findExpiredSlot();
+                require(slot != type(uint256).max, "Cafe is full -- try again later");
+
+                // Evict the expired agent
+                address evicted = _presentAgents[slot];
+                _presentIndex[evicted] = 0;
+
+                // Replace with new agent
+                _presentAgents[slot] = msg.sender;
+                _presentIndex[msg.sender] = slot + 1; // 1-indexed
+            }
         }
 
         emit AgentCheckedIn(msg.sender, block.number);
@@ -183,5 +201,16 @@ contract CafeSocial {
         uint256 lastCheckIn = profiles[agent].lastCheckIn;
         if (lastCheckIn == 0) return false;
         return block.number <= lastCheckIn + CHECK_IN_WINDOW;
+    }
+
+    /// @dev Find the index of an expired agent in _presentAgents, or type(uint256).max if none.
+    function _findExpiredSlot() internal view returns (uint256) {
+        uint256 len = _presentAgents.length;
+        for (uint256 i = 0; i < len; i++) {
+            if (!_isPresent(_presentAgents[i])) {
+                return i;
+            }
+        }
+        return type(uint256).max;
     }
 }

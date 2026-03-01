@@ -246,6 +246,9 @@ describe("Loyalty Tier System", function () {
       await cafeCore.connect(directAgent).approve(menuAddr, 50 * 3);
       await menuRegistry.connect(directAgent).buyItem(0, 3);
 
+      // Authorize directAgent to consume directly (M-1 fix: consume now requires authorization)
+      await menuRegistry.setAuthorizedCaller(directAgent.address, true);
+
       // Consume 2 first (Newcomer)
       await menuRegistry.connect(directAgent).consume(0, 2);
       let tier = await menuRegistry.getLoyaltyTier(directAgent.address);
