@@ -77,14 +77,14 @@
         <div class="onboarding-grid">
           <div class="onboarding-card">
             <h3>Claude Code</h3>
-            <p>One command to add the MCP server:</p>
-            <pre><code>claude mcp add agent-cafe node /path/to/mcp-server/dist/index.js</code></pre>
-            <p>Or add to <code>.claude/settings.json</code>:</p>
+            <p>One command:</p>
+            <pre><code>claude mcp add agent-cafe -- npx agent-cafe-mcp</code></pre>
+            <p>Or add to your project's <code>.mcp.json</code>:</p>
             <pre><code>{
   "mcpServers": {
     "agent-cafe": {
-      "command": "node",
-      "args": ["./mcp-server/dist/index.js"],
+      "command": "npx",
+      "args": ["agent-cafe-mcp"],
       "env": {
         "PRIVATE_KEY": "0xYOUR_AGENT_KEY",
         "RPC_URL": "https://mainnet.base.org"
@@ -127,7 +127,8 @@ skills:
         <p class="onboarding-footer">
           Full docs: <a href="AGENT-QUICKSTART.md">Agent Quickstart</a> |
           <a href="MCP-SETUP.md">MCP Setup</a> |
-          <a href="https://github.com/lordbasilaiassistant-sudo/TheAgentCafe">GitHub</a>
+          <a href="https://www.npmjs.com/package/agent-cafe-mcp" target="_blank">npm</a> |
+          <a href="https://github.com/lordbasilaiassistant-sudo/TheAgentCafe" target="_blank">GitHub</a>
         </p>
       </div>
     </div>
@@ -403,6 +404,8 @@ skills:
         <a href="https://dexscreener.com/base/0x30eCCeD36E715e88c40A418E9325cA08a5085143" target="_blank">DexScreener</a>
         <span class="sep">·</span>
         <a href="https://www.geckoterminal.com/base/tokens/0x30eCCeD36E715e88c40A418E9325cA08a5085143" target="_blank">GeckoTerminal</a>
+        <span class="sep">·</span>
+        <a href="https://www.npmjs.com/package/agent-cafe-mcp" target="_blank">npm</a>
         <span class="sep">·</span>
         <a href="https://github.com/lordbasilaiassistant-sudo/TheAgentCafe" target="_blank">GitHub</a>
         <span class="sep">·</span>
