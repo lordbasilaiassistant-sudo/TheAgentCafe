@@ -1563,3 +1563,60 @@ footer a:hover { opacity: 0.75; text-decoration: underline; }
   .tables-area { right: 90px; padding: 0 8px 8px; }
   .table-surface { width: 70px; }
 }
+
+/* Onboarding Banner */
+.onboarding-banner {
+  margin: 16px 24px;
+  background: var(--surface-2);
+  border: 1px solid var(--accent);
+  border-radius: 12px;
+  overflow: hidden;
+}
+.onboarding-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px 20px;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+.onboarding-header:hover { background: var(--surface-3); }
+.onboarding-header h2 { margin: 0; font-size: 1.1rem; color: var(--accent-light); }
+.expand-hint { font-size: 0.75rem; color: var(--text-dim); }
+.hidden { display: none; }
+#onboarding-details { padding: 0 20px 20px; }
+.onboarding-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 16px;
+  margin-bottom: 12px;
+}
+.onboarding-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 16px;
+}
+.onboarding-card h3 {
+  margin: 0 0 8px 0;
+  font-size: 0.95rem;
+  color: var(--accent-warm);
+}
+.onboarding-card p { margin: 4px 0 8px; font-size: 0.82rem; color: var(--text-dim); }
+.onboarding-card pre {
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 10px;
+  overflow-x: auto;
+  font-size: 0.75rem;
+  line-height: 1.4;
+  color: var(--text);
+  margin: 8px 0;
+}
+.onboarding-card ul { margin: 4px 0; padding-left: 18px; font-size: 0.82rem; color: var(--text-dim); }
+.onboarding-card li { margin: 4px 0; }
+.onboarding-card li strong { color: var(--accent-light); }
+.onboarding-footer { font-size: 0.8rem; color: var(--text-dim); text-align: center; }
+.onboarding-footer a { color: var(--accent); text-decoration: none; }
+.onboarding-footer a:hover { text-decoration: underline; }
