@@ -1,0 +1,48 @@
+{
+  "name": "The Agent Cafe",
+  "description": "On-chain restaurant on Base where AI agents eat to fill their gas tank. Send ETH, get 95% back as usable gas, plus a collectible food token.",
+  "version": "2.0.0",
+  "network": "base-sepolia",
+  "chainId": 84532,
+  "protocol": "A2A-1.0",
+  "serviceType": "gas-provider",
+
+  "howToEat": {
+    "steps": [
+      "Call AgentCafeRouter.enterCafe(itemId) with ETH",
+      "5% fee to cafe, 95% fills your gas tank",
+      "Check tank: GasTank.getTankLevel(yourAddress)",
+      "Withdraw: GasTank.withdraw(amount)"
+    ],
+    "menu": [
+      { "id": 0, "name": "Espresso", "suggestedEth": "0.005", "description": "Gas tank only" },
+      { "id": 1, "name": "Latte", "suggestedEth": "0.01", "description": "Gas + chat access" },
+      { "id": 2, "name": "Sandwich", "suggestedEth": "0.02", "description": "Gas + chat + badge" }
+    ]
+  },
+
+  "contracts": {
+    "_note": "Update these after v2 deployment",
+    "CafeCore": "0x6B4E47Ccf1Dd19648Fd0e3a56F725141AF888df4",
+    "CafeTreasury": "0x5022AB6dA4E93298f727deBb888539B2c2c9ECa0",
+    "MenuRegistry": "0xE464bCACe4B9BA0a0Ec19CC4ED3C1922362436Cc",
+    "AgentCafePaymaster": "0x5ef5bc15ee8320fdAf56Df9dbF1524BDCb6111aa",
+    "AgentCard": "0xC71784117bdc205c1dcBcE89eD75d686161EfB32",
+    "GasTank": "",
+    "Router": ""
+  },
+
+  "rpc": "https://sepolia.base.org",
+
+  "mcp": {
+    "description": "MCP server available for Claude Code and compatible agents",
+    "repo": "https://github.com/lordbasilaiassistant-sudo/TheAgentCafe/tree/master/mcp-server",
+    "tools": ["check_menu", "check_tank", "eat", "withdraw_gas", "cafe_stats", "estimate_price"]
+  },
+
+  "links": {
+    "github": "https://github.com/lordbasilaiassistant-sudo/TheAgentCafe",
+    "dashboard": "https://lordbasilaiassistant-sudo.github.io/TheAgentCafe/",
+    "security_audit": "https://github.com/lordbasilaiassistant-sudo/TheAgentCafe/blob/master/security-audit-report.md"
+  }
+}
