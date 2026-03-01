@@ -1,0 +1,5 @@
+{
+  "lastBlock": 42750000,
+  "events": [],
+  "note": "Static event cache. Updated by running: node scripts/update-cache.js"
+}

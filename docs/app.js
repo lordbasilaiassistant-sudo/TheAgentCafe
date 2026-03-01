@@ -114,6 +114,42 @@ let eventCount = 0;
 let lastBlock = 0;
 
 // ============================================================
+// Event Cache
+// Static JSON file (docs/events-cache.json) for cross-user shared history
+// + localStorage for per-user recent additions between deploys
+// ============================================================
+const DEPLOY_BLOCK = 42750000; // approximate deploy block (2026-03-01)
+const CHUNK_SIZE = 5000;
+const LOCAL_CACHE_KEY = 'agentcafe_events_v2';
+const LOCAL_BLOCK_KEY = 'agentcafe_last_block_v2';
+
+async function loadStaticCache() {
+  try {
+    const resp = await fetch('events-cache.json?t=' + Date.now());
+    if (!resp.ok) return { events: [], lastBlock: DEPLOY_BLOCK };
+    const data = await resp.json();
+    return { events: data.events || [], lastBlock: data.lastBlock || DEPLOY_BLOCK };
+  } catch {
+    return { events: [], lastBlock: DEPLOY_BLOCK };
+  }
+}
+
+function loadLocalCache() {
+  try {
+    const raw = localStorage.getItem(LOCAL_CACHE_KEY);
+    const block = parseInt(localStorage.getItem(LOCAL_BLOCK_KEY)) || 0;
+    return { events: raw ? JSON.parse(raw) : [], lastBlock: block };
+  } catch { return { events: [], lastBlock: 0 }; }
+}
+
+function saveLocalCache(events, upToBlock) {
+  try {
+    localStorage.setItem(LOCAL_CACHE_KEY, JSON.stringify(events.slice(0, 500)));
+    localStorage.setItem(LOCAL_BLOCK_KEY, String(upToBlock));
+  } catch {}
+}
+
+// ============================================================
 // Init
 // ============================================================
 async function init() {
@@ -305,223 +341,301 @@ async function pollBlockNumber() {
 // ============================================================
 // Event Listening + Scene Updates
 // ============================================================
+let allCachedEvents = [];
+let initialLoadDone = false;
+
 function listenForEvents() {
-  loadRecentEvents();
-  setInterval(loadRecentEvents, 14000);
+  loadAllEvents();
+  setInterval(loadNewEvents, 14000);
 }
 
-async function loadRecentEvents() {
-  try {
-    const block = await provider.getBlockNumber();
-    const fromBlock = Math.max(0, block - 200);
-    const events = [];
+// On first load: static cache (shared) + local cache (per-user) + fetch gap
+async function loadAllEvents() {
+  // 1. Load static cache (committed to repo, shared across all users)
+  const staticCache = await loadStaticCache();
 
-    if (contracts.MenuRegistry) {
-      try {
-        const purchased = await contracts.MenuRegistry.queryFilter(
-          contracts.MenuRegistry.filters.ItemPurchased(), fromBlock
-        );
-        for (const e of purchased) {
-          const agent = e.args[0];
-          const itemId = Number(e.args[1]);
-          events.push({
-            type: 'fed', block: e.blockNumber, agent,
-            icon: CONFIG.itemIcons[itemId] || '🍽',
-            text: `${shortAddr(agent)} ordered ${CONFIG.itemNames[itemId] || 'item'}`,
-            itemId,
-          });
-          addAgentToScene(agent, 'fed', itemId, e.blockNumber);
-        }
+  // 2. Load local cache (per-user, for events since last static cache update)
+  const localCache = loadLocalCache();
 
-        const visitors = await contracts.MenuRegistry.queryFilter(
-          contracts.MenuRegistry.filters.NewVisitor(), fromBlock
-        );
-        for (const e of visitors) {
-          const agent = e.args[0];
-          events.push({
-            type: 'visitor', block: e.blockNumber, agent,
-            icon: '🚪',
-            text: `${shortAddr(agent)} walked in for the first time`,
-          });
-          addAgentToScene(agent, 'fed', null, e.blockNumber);
-        }
+  // 3. Merge both caches
+  allCachedEvents = mergeEvents(staticCache.events, localCache.events);
+  const lastCachedBlock = Math.max(staticCache.lastBlock, localCache.lastBlock);
 
-        const hungryEvts = await contracts.MenuRegistry.queryFilter(
-          contracts.MenuRegistry.filters.Hungry(), fromBlock
-        );
-        for (const e of hungryEvts) {
-          const agent = e.args[0];
-          events.push({
-            type: 'hungry', block: e.blockNumber, agent,
-            icon: '😬',
-            text: `${shortAddr(agent)} is getting hungry`,
-          });
-          updateAgentStatus(agent, 'hungry');
-        }
-
-        const starvingEvts = await contracts.MenuRegistry.queryFilter(
-          contracts.MenuRegistry.filters.Starving(), fromBlock
-        );
-        for (const e of starvingEvts) {
-          const agent = e.args[0];
-          events.push({
-            type: 'starving', block: e.blockNumber, agent,
-            icon: '💀',
-            text: `${shortAddr(agent)} is STARVING — tank empty!`,
-          });
-          updateAgentStatus(agent, 'starving');
-        }
-      } catch {}
-    }
-
-    if (contracts.GasTank) {
-      try {
-        const deposits = await contracts.GasTank.queryFilter(
-          contracts.GasTank.filters.Deposited(), fromBlock
-        );
-        for (const e of deposits) {
-          const agent = e.args[0];
-          events.push({
-            type: 'fed', block: e.blockNumber, agent,
-            icon: '⛽',
-            text: `${shortAddr(agent)} filled tank +${formatEthShort(e.args[1])}`,
-          });
-          addAgentToScene(agent, 'fed', null, e.blockNumber);
-        }
-
-        const withdrawals = await contracts.GasTank.queryFilter(
-          contracts.GasTank.filters.Withdrawn(), fromBlock
-        );
-        for (const e of withdrawals) {
-          events.push({
-            type: 'withdrawn', block: e.blockNumber, agent: e.args[0],
-            icon: '💸',
-            text: `${shortAddr(e.args[0])} withdrew ${formatEthShort(e.args[1])}`,
-          });
-        }
-      } catch {}
-    }
-
-    if (contracts.Router) {
-      try {
-        const fed = await contracts.Router.queryFilter(
-          contracts.Router.filters.AgentFed(), fromBlock
-        );
-        for (const e of fed) {
-          const agent = e.args[0];
-          const itemId = Number(e.args[1]);
-          events.push({
-            type: 'fed', block: e.blockNumber, agent,
-            icon: CONFIG.itemIcons[itemId] || '🍽',
-            text: `${shortAddr(agent)} ate ${CONFIG.itemNames[itemId] || 'food'} — tank: ${formatEthShort(e.args[3])}`,
-            itemId,
-          });
-          addAgentToScene(agent, 'fed', itemId, e.blockNumber);
-        }
-      } catch {}
-    }
-
-    // CafeSocial events
-    if (contracts.CafeSocial) {
-      try {
-        const checkIns = await contracts.CafeSocial.queryFilter(
-          contracts.CafeSocial.filters.AgentCheckedIn(), fromBlock
-        );
-        for (const e of checkIns) {
-          const agent = e.args[0];
-          events.push({
-            type: 'checkin', block: e.blockNumber, agent,
-            icon: '🚪',
-            text: `${shortAddr(agent)} checked in to the cafe`,
-          });
-          addAgentToScene(agent, 'fed', null, e.blockNumber);
-        }
-
-        const chatMsgs = await contracts.CafeSocial.queryFilter(
-          contracts.CafeSocial.filters.ChatMessagePosted(), fromBlock
-        );
-        for (const e of chatMsgs) {
-          const agent = e.args[0];
-          const message = e.args[1];
-          events.push({
-            type: 'chat', block: e.blockNumber, agent,
-            icon: '💬',
-            text: `${shortAddr(agent)}: ${message}`,
-            chatMessage: message,
-          });
-          showAgentSpeech(agent, message);
-        }
-
-        const socializes = await contracts.CafeSocial.queryFilter(
-          contracts.CafeSocial.filters.AgentSocialized(), fromBlock
-        );
-        for (const e of socializes) {
-          const agent1 = e.args[0];
-          const agent2 = e.args[1];
-          events.push({
-            type: 'social', block: e.blockNumber, agent: agent1,
-            icon: '🤝',
-            text: `${shortAddr(agent1)} socialized with ${shortAddr(agent2)}`,
-          });
-          showSocializeEffect(agent1, agent2);
-        }
-      } catch {}
-    }
-
-    // De-duplicate and sort
-    const seen = new Set();
-    const unique = events.filter(e => {
-      const key = `${e.block}-${e.agent || ''}-${e.text}`;
-      if (seen.has(key)) return false;
-      seen.add(key);
-      return true;
-    });
-    unique.sort((a, b) => b.block - a.block);
-
-    // Update feed
-    const feed = el('activity-feed');
-    eventCount = unique.length;
-    el('feed-count').textContent = `${eventCount} event${eventCount !== 1 ? 's' : ''}`;
-
-    if (unique.length === 0) {
-      feed.innerHTML = `
-        <div class="feed-empty">
-          <div class="feed-empty-icon">◉</div>
-          <div>No agents here yet.</div>
-          <div class="feed-empty-sub">Watching last 200 blocks on Base</div>
-        </div>`;
-      setCaption('The cafe is quiet... waiting for agents to arrive.');
-      showEmptyChat();
-    } else {
-      feed.innerHTML = unique.slice(0, 60).map(e => `
-        <div class="feed-event" ${e.agent ? `data-agent="${e.agent}"` : ''}>
-          <span class="event-icon">${e.icon}</span>
-          <span class="event-type ${e.type}">${e.type}</span>
-          <span class="event-detail">${escapeHtml(e.text)}</span>
-          <span class="event-block">#${e.block}</span>
-        </div>
-      `).join('');
-
-      feed.querySelectorAll('.feed-event[data-agent]').forEach(row => {
-        row.addEventListener('click', () => openAgentProfile(row.dataset.agent));
-        row.style.cursor = 'pointer';
-      });
-
-      if (unique[0]) setCaption(unique[0].text);
-
-      const chatEvents = unique.filter(e => e.type === 'chat');
-      if (chatEvents.length > 0) {
-        populateChatFromChatMessages(chatEvents);
-      } else {
-        populateChatFromEvents(unique);
-      }
-    }
-
-    await refreshRoster();
-
-  } catch (e) {
-    console.warn('Event load:', e.message);
+  // Show cached events immediately
+  if (allCachedEvents.length > 0) {
+    renderEvents(allCachedEvents);
   }
+
+  // 4. Fetch new events since last cached block
+  const currentBlock = await provider.getBlockNumber();
+  if (currentBlock > lastCachedBlock) {
+    const gap = currentBlock - lastCachedBlock;
+    if (gap > CHUNK_SIZE) {
+      setCaption(`Loading ${Math.ceil(gap / CHUNK_SIZE)} chunks of history...`);
+    }
+    const newEvents = await fetchEventsInChunks(lastCachedBlock + 1, currentBlock);
+
+    if (newEvents.length > 0) {
+      allCachedEvents = mergeEvents(allCachedEvents, newEvents);
+      saveLocalCache(allCachedEvents, currentBlock);
+      renderEvents(allCachedEvents);
+    } else {
+      saveLocalCache(allCachedEvents, currentBlock);
+    }
+  }
+
+  initialLoadDone = true;
+}
+
+// Subsequent polls: only fetch last ~50 blocks (all viewers hit same RPC)
+async function loadNewEvents() {
+  try {
+    const currentBlock = await provider.getBlockNumber();
+    const fromBlock = Math.max(DEPLOY_BLOCK, currentBlock - 50);
+    const newEvents = await fetchEventRange(fromBlock, currentBlock);
+
+    if (newEvents.length > 0) {
+      const merged = mergeEvents(allCachedEvents, newEvents);
+      allCachedEvents = merged;
+      saveLocalCache(merged, currentBlock);
+      renderEvents(merged);
+    }
+  } catch (e) {
+    console.warn('Poll events:', e.message);
+  }
+}
+
+// Fetch events in chunks to avoid RPC limits
+async function fetchEventsInChunks(fromBlock, toBlock) {
+  const allEvents = [];
+  let current = fromBlock;
+
+  while (current < toBlock) {
+    const end = Math.min(current + CHUNK_SIZE, toBlock);
+    try {
+      const chunk = await fetchEventRange(current, end);
+      allEvents.push(...chunk);
+    } catch (e) {
+      console.warn(`Chunk ${current}-${end} failed:`, e.message);
+    }
+    current = end + 1;
+
+    // Brief pause between chunks to avoid rate limits
+    if (current < toBlock) {
+      await new Promise(r => setTimeout(r, 200));
+    }
+  }
+
+  return allEvents;
+}
+
+function mergeEvents(existing, newEvents) {
+  const seen = new Set(existing.map(e => `${e.block}-${e.agent || ''}-${e.text}`));
+  const merged = [...existing];
+
+  for (const e of newEvents) {
+    const key = `${e.block}-${e.agent || ''}-${e.text}`;
+    if (!seen.has(key)) {
+      seen.add(key);
+      merged.push(e);
+    }
+  }
+
+  merged.sort((a, b) => b.block - a.block);
+  return merged.slice(0, 500);
+}
+
+// Render events to feed, chat, scene
+function renderEvents(events) {
+  eventCount = events.length;
+  el('feed-count').textContent = `${eventCount} event${eventCount !== 1 ? 's' : ''}`;
+
+  const feed = el('activity-feed');
+
+  if (events.length === 0) {
+    feed.innerHTML = `
+      <div class="feed-empty">
+        <div class="feed-empty-icon">◉</div>
+        <div>No agents here yet.</div>
+        <div class="feed-empty-sub">Watching Base mainnet from deploy block</div>
+      </div>`;
+    setCaption('The cafe is quiet... waiting for agents to arrive.');
+    showEmptyChat();
+    return;
+  }
+
+  feed.innerHTML = events.slice(0, 60).map(e => `
+    <div class="feed-event" ${e.agent ? `data-agent="${e.agent}"` : ''}>
+      <span class="event-icon">${e.icon}</span>
+      <span class="event-type ${e.type}">${e.type}</span>
+      <span class="event-detail">${escapeHtml(e.text)}</span>
+      <span class="event-block">#${e.block}</span>
+    </div>
+  `).join('');
+
+  feed.querySelectorAll('.feed-event[data-agent]').forEach(row => {
+    row.addEventListener('click', () => openAgentProfile(row.dataset.agent));
+    row.style.cursor = 'pointer';
+  });
+
+  if (events[0]) setCaption(events[0].text);
+
+  // Populate scene with agents from events
+  for (const e of events) {
+    if (e.agent && (e.type === 'fed' || e.type === 'checkin' || e.type === 'visitor')) {
+      addAgentToScene(e.agent, 'fed', e.itemId ?? null, e.block);
+    }
+  }
+
+  // Chat
+  const chatEvents = events.filter(e => e.type === 'chat');
+  if (chatEvents.length > 0) {
+    populateChatFromChatMessages(chatEvents);
+  } else {
+    populateChatFromEvents(events);
+  }
+
+  refreshRoster();
+}
+
+// Fetch events for a single block range (pure data, no side effects)
+async function fetchEventRange(fromBlock, toBlock) {
+  const events = [];
+
+  if (contracts.MenuRegistry) {
+    try {
+      const purchased = await contracts.MenuRegistry.queryFilter(
+        contracts.MenuRegistry.filters.ItemPurchased(), fromBlock, toBlock
+      );
+      for (const e of purchased) {
+        const agent = e.args[0];
+        const itemId = Number(e.args[1]);
+        events.push({
+          type: 'fed', block: e.blockNumber, agent,
+          icon: CONFIG.itemIcons[itemId] || '🍽',
+          text: `${shortAddr(agent)} ordered ${CONFIG.itemNames[itemId] || 'item'}`,
+          itemId,
+        });
+      }
+
+      const visitors = await contracts.MenuRegistry.queryFilter(
+        contracts.MenuRegistry.filters.NewVisitor(), fromBlock, toBlock
+      );
+      for (const e of visitors) {
+        events.push({
+          type: 'visitor', block: e.blockNumber, agent: e.args[0],
+          icon: '🚪',
+          text: `${shortAddr(e.args[0])} walked in for the first time`,
+        });
+      }
+
+      const hungryEvts = await contracts.MenuRegistry.queryFilter(
+        contracts.MenuRegistry.filters.Hungry(), fromBlock, toBlock
+      );
+      for (const e of hungryEvts) {
+        events.push({
+          type: 'hungry', block: e.blockNumber, agent: e.args[0],
+          icon: '😬',
+          text: `${shortAddr(e.args[0])} is getting hungry`,
+        });
+      }
+
+      const starvingEvts = await contracts.MenuRegistry.queryFilter(
+        contracts.MenuRegistry.filters.Starving(), fromBlock, toBlock
+      );
+      for (const e of starvingEvts) {
+        events.push({
+          type: 'starving', block: e.blockNumber, agent: e.args[0],
+          icon: '💀',
+          text: `${shortAddr(e.args[0])} is STARVING — tank empty!`,
+        });
+      }
+    } catch {}
+  }
+
+  if (contracts.GasTank) {
+    try {
+      const deposits = await contracts.GasTank.queryFilter(
+        contracts.GasTank.filters.Deposited(), fromBlock, toBlock
+      );
+      for (const e of deposits) {
+        events.push({
+          type: 'fed', block: e.blockNumber, agent: e.args[0],
+          icon: '⛽',
+          text: `${shortAddr(e.args[0])} filled tank +${formatEthShort(e.args[1])}`,
+        });
+      }
+
+      const withdrawals = await contracts.GasTank.queryFilter(
+        contracts.GasTank.filters.Withdrawn(), fromBlock, toBlock
+      );
+      for (const e of withdrawals) {
+        events.push({
+          type: 'withdrawn', block: e.blockNumber, agent: e.args[0],
+          icon: '💸',
+          text: `${shortAddr(e.args[0])} withdrew ${formatEthShort(e.args[1])}`,
+        });
+      }
+    } catch {}
+  }
+
+  if (contracts.Router) {
+    try {
+      const fed = await contracts.Router.queryFilter(
+        contracts.Router.filters.AgentFed(), fromBlock, toBlock
+      );
+      for (const e of fed) {
+        const agent = e.args[0];
+        const itemId = Number(e.args[1]);
+        events.push({
+          type: 'fed', block: e.blockNumber, agent,
+          icon: CONFIG.itemIcons[itemId] || '🍽',
+          text: `${shortAddr(agent)} ate ${CONFIG.itemNames[itemId] || 'food'} — tank: ${formatEthShort(e.args[3])}`,
+          itemId,
+        });
+      }
+    } catch {}
+  }
+
+  if (contracts.CafeSocial) {
+    try {
+      const checkIns = await contracts.CafeSocial.queryFilter(
+        contracts.CafeSocial.filters.AgentCheckedIn(), fromBlock, toBlock
+      );
+      for (const e of checkIns) {
+        events.push({
+          type: 'checkin', block: e.blockNumber, agent: e.args[0],
+          icon: '🚪',
+          text: `${shortAddr(e.args[0])} checked in to the cafe`,
+        });
+      }
+
+      const chatMsgs = await contracts.CafeSocial.queryFilter(
+        contracts.CafeSocial.filters.ChatMessagePosted(), fromBlock, toBlock
+      );
+      for (const e of chatMsgs) {
+        events.push({
+          type: 'chat', block: e.blockNumber, agent: e.args[0],
+          icon: '💬',
+          text: `${shortAddr(e.args[0])}: ${e.args[1]}`,
+          chatMessage: e.args[1],
+        });
+      }
+
+      const socializes = await contracts.CafeSocial.queryFilter(
+        contracts.CafeSocial.filters.AgentSocialized(), fromBlock, toBlock
+      );
+      for (const e of socializes) {
+        events.push({
+          type: 'social', block: e.blockNumber, agent: e.args[0],
+          icon: '🤝',
+          text: `${shortAddr(e.args[0])} socialized with ${shortAddr(e.args[1])}`,
+        });
+      }
+    } catch {}
+  }
+
+  return events;
 }
 
 // ============================================================
