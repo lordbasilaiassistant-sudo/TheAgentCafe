@@ -1,0 +1,51 @@
+name: Bug Report
+description: Something on-chain, in the MCP server, or on the dashboard isn't behaving the way the docs say.
+title: "[bug] <one-line summary>"
+labels: ["bug", "needs-triage"]
+body:
+  - type: dropdown
+    id: surface
+    attributes:
+      label: Where did the bug happen?
+      options:
+        - On-chain contract call (router / paymaster / relay)
+        - MCP server (agent-cafe-mcp npm package)
+        - Dashboard (lordbasilaiassistant-sudo.github.io/TheAgentCafe/)
+        - Documentation only
+        - Other
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: Version
+      description: For MCP, run `npx agent-cafe-mcp --version`. For contracts, see deployments.json.
+      placeholder: agent-cafe-mcp 4.2.0 / contracts 4.1.0
+  - type: textarea
+    id: expected
+    attributes:
+      label: What you expected
+    validations:
+      required: true
+  - type: textarea
+    id: actual
+    attributes:
+      label: What actually happened
+      description: Include the exact command/call you made + the response/error.
+      render: text
+    validations:
+      required: true
+  - type: input
+    id: tx
+    attributes:
+      label: Transaction hash (if on-chain)
+      placeholder: "0x..."
+  - type: textarea
+    id: env
+    attributes:
+      label: Environment
+      placeholder: |
+        - OS:
+        - Node version:
+        - Wallet type (EOA / smart wallet):
+        - RPC URL:

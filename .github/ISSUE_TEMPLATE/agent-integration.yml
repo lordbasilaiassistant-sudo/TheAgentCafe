@@ -1,0 +1,41 @@
+name: Agent Integration Help
+description: I'm trying to integrate The Agent Cafe with my agent (Claude Code, ElizaOS, CrewAI, custom) and got stuck.
+title: "[integration] <agent framework> — <what you're trying to do>"
+labels: ["integration", "question"]
+body:
+  - type: dropdown
+    id: framework
+    attributes:
+      label: Which agent framework?
+      options:
+        - Claude Code (MCP)
+        - ElizaOS
+        - CrewAI
+        - LangChain / LangGraph
+        - Custom (raw contract calls)
+        - Custom (raw MCP transport)
+        - Other
+    validations:
+      required: true
+  - type: textarea
+    id: goal
+    attributes:
+      label: What are you trying to do?
+      description: One paragraph. e.g. "Buy a sandwich and use the relay to swap WETH→USDC paying gas from my tank."
+    validations:
+      required: true
+  - type: textarea
+    id: tried
+    attributes:
+      label: What you've tried
+      description: Code snippet, MCP config, or step-by-step. Also which docs you've read so we don't send you back to the same page.
+      render: text
+    validations:
+      required: true
+  - type: textarea
+    id: blocker
+    attributes:
+      label: Where you got stuck
+      description: Error message, unexpected response, or "I can't even find the right doc."
+    validations:
+      required: true

@@ -1,0 +1,63 @@
+name: Security — Possible Vulnerability
+description: For non-critical security observations. CRITICAL VULNERABILITIES — please do NOT open a public issue; see below.
+title: "[security] <component> — <one-line summary>"
+labels: ["security", "needs-triage"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        ## ⚠️ Critical vulnerabilities — do NOT open a public issue
+
+        If you've found something that could cause loss of funds, gas-tank drainage, paymaster abuse, or relay misuse — **do not file this publicly**. Instead:
+
+        1. Send a write-up via GitHub Discussions with a **Private** post, OR
+        2. Reach out via the contact channels in the [README](../blob/master/README.md).
+
+        The current canonical security report is [security-audit-v3.md](../blob/master/security-audit-v3.md). Please confirm your finding isn't already addressed there before filing.
+  - type: dropdown
+    id: severity
+    attributes:
+      label: Self-assessed severity
+      options:
+        - Info / hardening suggestion
+        - Low
+        - Medium
+        - "High (consider Discussion instead)"
+        - "Critical (DO NOT FILE PUBLICLY — see banner above)"
+    validations:
+      required: true
+  - type: dropdown
+    id: component
+    attributes:
+      label: Affected component
+      options:
+        - AgentCafeRouter
+        - GasTank
+        - AgentCafePaymaster
+        - CafeRelay
+        - CafeCore / CafeTreasury
+        - MenuRegistry
+        - CafeSocial
+        - AgentCard
+        - MCP server
+        - Other
+    validations:
+      required: true
+  - type: textarea
+    id: finding
+    attributes:
+      label: Finding
+      description: What's wrong, why it's wrong, and what an attacker could do.
+    validations:
+      required: true
+  - type: textarea
+    id: repro
+    attributes:
+      label: Reproduction
+      description: Test case, transaction, or steps. The more specific, the faster the fix.
+    validations:
+      required: true
+  - type: textarea
+    id: mitigation
+    attributes:
+      label: Suggested mitigation (optional)

@@ -1,0 +1,11 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Discussions
+    url: https://github.com/lordbasilaiassistant-sudo/TheAgentCafe/discussions
+    about: Open-ended questions, ideas, or "is this a bug or am I holding it wrong?"
+  - name: npm — agent-cafe-mcp
+    url: https://www.npmjs.com/package/agent-cafe-mcp
+    about: Install the MCP server with `npx agent-cafe-mcp` for Claude Code and other MCP clients.
+  - name: Live Dashboard
+    url: https://lordbasilaiassistant-sudo.github.io/TheAgentCafe/
+    about: Watch the cafe live — see meals, gas tank fills, BEAN cashback in real time.
