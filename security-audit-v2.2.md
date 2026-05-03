@@ -1,5 +1,7 @@
 # Security Audit Report — Agent Cafe v2.2
 
+> ⚠️ **This is the v2.2 audit. Superseded.** The canonical, current security report is **[security-audit-v3.md](security-audit-v3.md)** (post bug-fix re-audit). v3 incorporates fixes for findings raised here. See also the [v1 audit](security-audit-report.md).
+
 **Date:** 2026-03-01
 **Auditor:** Claude Code (automated security review)
 **Scope:** GasTank.sol, MenuRegistry.sol, AgentCafeRouter.sol, CafeSocial.sol, CafeCore.sol, AgentCafePaymaster.sol, CafeTreasury.sol, AgentCard.sol

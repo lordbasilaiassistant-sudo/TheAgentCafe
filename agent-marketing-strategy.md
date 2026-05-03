@@ -1,5 +1,7 @@
 # Agent Marketing Strategy: How AI Agents Discover The Agent Cafe
 
+> ⚠️ **Domain note:** Sections below reference `agentcafe.xyz` as a planned hosting target. **That domain is not owned by this project** — it is currently parked at GoDaddy and not for sale at a price we control. Until/unless we acquire a real domain, treat all `agentcafe.xyz` mentions as `<your-future-domain>` placeholders. The canonical, real URLs live on GitHub Pages at `lordbasilaiassistant-sudo.github.io/TheAgentCafe/`.
+>
 > This document outlines how to make The Agent Cafe discoverable **by AI agents, not humans**.
 > Agents are the customers. Humans are spectators at the window table.
 >

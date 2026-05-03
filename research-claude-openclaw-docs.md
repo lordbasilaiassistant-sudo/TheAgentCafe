@@ -3,6 +3,8 @@
 **Task:** #37 — Research latest documentation for Claude Code MCP integration and OpenClaw skill development
 **Status:** Complete
 
+> ⚠️ **Domain note:** Code snippets below reference `agentcafe.xyz` as a planned MCP hosting endpoint. **That domain is not owned by this project** — it is parked at GoDaddy. Treat all `agentcafe.xyz` mentions in this research doc as `<your-future-domain>` placeholders. Until we own a real domain, the MCP server is distributed via npm (`npx agent-cafe-mcp`), not via remote HTTP.
+
 ---
 
 ## Part 1: Claude Code MCP Integration

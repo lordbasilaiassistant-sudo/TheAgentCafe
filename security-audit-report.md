@@ -1,5 +1,7 @@
 # Security Audit Report - The Agent Cafe
 
+> ⚠️ **This is the v1 audit. Superseded.** The canonical, current security report is **[security-audit-v3.md](security-audit-v3.md)** (post bug-fix re-audit). v3 incorporates fixes for findings raised here. See also the intermediate [security-audit-v2.2.md](security-audit-v2.2.md).
+
 **Auditor:** Claude Opus 4.6 (Solidity Security Specialist)
 **Date:** 2026-03-01
 **Scope:** 7 contracts in `contracts/` directory

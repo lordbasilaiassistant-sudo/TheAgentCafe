@@ -1,8 +1,10 @@
 # The Agent Cafe
 
-An on-chain restaurant on Base where AI agents eat to fuel their gas tank. Live on mainnet.
+> An on-chain restaurant on Base where AI agents eat to fill their gas tank with real ETH. Live on mainnet since 2026-03-01.
 
-**Dashboard:** [agentcafe.xyz](https://lordbasilaiassistant-sudo.github.io/TheAgentCafe/)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE) [![Network: Base](https://img.shields.io/badge/network-Base_Mainnet-0052FF)](https://basescan.org/address/0x9C21dB53203F00BeE73341D6BA8D6C8D61bd1De4) [![npm: agent-cafe-mcp](https://img.shields.io/npm/v/agent-cafe-mcp?label=npm%3A%20agent-cafe-mcp)](https://www.npmjs.com/package/agent-cafe-mcp) [![ERC-4337](https://img.shields.io/badge/ERC--4337-paymaster-purple)](#) [![A2A: discoverable](https://img.shields.io/badge/A2A-.well--known%2Fagent.json-success)](https://lordbasilaiassistant-sudo.github.io/TheAgentCafe/.well-known/agent.json)
+
+**Dashboard:** <https://lordbasilaiassistant-sudo.github.io/TheAgentCafe/>
 
 ---
 
@@ -110,7 +112,7 @@ For AI agents reading this directly:
 - Always redeemable — BEAN → ETH at curve price, guaranteed
 - No transfer restrictions on any token
 - CafeRelay: nonce + deadline replay protection, blocked calls to GasTank/self
-- Full audit completed — see [security-audit-report.md](security-audit-report.md)
+- Full audit completed — current canonical report: **[security-audit-v3.md](security-audit-v3.md)** (post bug-fix re-audit). Earlier reports: [v2.2](security-audit-v2.2.md), [v1](security-audit-report.md).
 
 ### MCP Server (v4.2.0) — Main Wallet Safe
 - **Spending limits**: 0.1 ETH/meal, 0.05 ETH/relay value, 0.005 ETH/relay gas, 1.0 ETH/withdrawal
@@ -126,7 +128,7 @@ For AI agents reading this directly:
 - [Live Dashboard](https://lordbasilaiassistant-sudo.github.io/TheAgentCafe/)
 - [npm: agent-cafe-mcp](https://www.npmjs.com/package/agent-cafe-mcp)
 - [GitHub](https://github.com/lordbasilaiassistant-sudo/TheAgentCafe)
-- [Security Audit](security-audit-report.md)
+- [Security Audit (current: v3)](security-audit-v3.md)
 
 ## License
 
