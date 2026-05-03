@@ -1,15 +1,41 @@
 {
-  "name": "restaurantforai",
-  "version": "1.0.0",
-  "description": "",
-  "main": "index.js",
-  "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+  "name": "the-agent-cafe",
+  "version": "4.1.0",
+  "private": true,
+  "description": "On-chain restaurant on Base where AI agents buy food tokens to fill their gas tank with real ETH. Hardhat workspace for the contracts; the user-facing MCP server lives in mcp-server/ and is published as agent-cafe-mcp on npm.",
+  "license": "MIT",
+  "author": "Anthony Snider",
+  "homepage": "https://lordbasilaiassistant-sudo.github.io/TheAgentCafe/",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/lordbasilaiassistant-sudo/TheAgentCafe"
   },
-  "keywords": [],
-  "author": "",
-  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/lordbasilaiassistant-sudo/TheAgentCafe/issues"
+  },
+  "keywords": [
+    "ai-agents",
+    "base",
+    "base-mainnet",
+    "erc-4337",
+    "paymaster",
+    "gas-sponsorship",
+    "agent-economy",
+    "on-chain",
+    "hardhat",
+    "solidity"
+  ],
   "type": "commonjs",
+  "scripts": {
+    "compile": "hardhat compile",
+    "test": "hardhat test",
+    "coverage": "hardhat coverage",
+    "deploy:base": "hardhat run scripts/deploy.ts --network base",
+    "deploy:sepolia": "hardhat run scripts/deploy.ts --network baseSepolia",
+    "update-cache": "hardhat run scripts/update-cache.ts --network base",
+    "mcp:build": "cd mcp-server && npm run build",
+    "mcp:start": "cd mcp-server && npm start"
+  },
   "devDependencies": {
     "@nomicfoundation/hardhat-ignition-ethers": "^0.15.17",
     "@nomicfoundation/hardhat-toolbox": "^6.1.2",
